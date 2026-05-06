@@ -7,7 +7,7 @@
 | 0 | Configuración base del proyecto | ✅ Completa |
 | 1 | Capa de datos (Room + DataStore) | ✅ Completa |
 | 2 | Capa de dominio (Use Cases) | ✅ Completa |
-| 3 | Navegación y shell de UI | ⬜ Pendiente |
+| 3 | Navegación y shell de UI | ✅ Completa |
 | 4 | Pantalla Hoy — MVP funcional | ⬜ Pendiente |
 | 5 | Modo Cuidador y gestión de medicamentos | ⬜ Pendiente |
 | 6 | Calendario, Historial y Detalle | ⬜ Pendiente |
@@ -110,14 +110,15 @@
 
 ---
 
-## Fase 3 — Navegación y shell de UI ⬜
+## Fase 3 — Navegación y shell de UI ✅
 
 > La app navega entre pantallas aunque estén vacías.
 
-- [ ] **3.1** Destinos de navegación — `@Serializable` data objects para: `Today`, `Calendar`, `History`, `TreatmentList`, `TreatmentForm(id?)`, `MedicationList(treatmentId)`, `MedicationForm(treatmentId, medicationId?)`, `MedicationDetail(medicationId)`, `Profile`, `PinLock(mode)`, `CaregiverHub`, `Settings`
-- [ ] **3.2** `AppNavGraph.kt` — `NavHost` con todos los destinos registrados, pantalla inicial `Today`
-- [ ] **3.3** `TabBar` — bottom navigation con 3 pestañas: Hoy, Calendario, Perfil con íconos Material3
-- [ ] **3.4** `MainActivity.kt` — reemplazar placeholder, configurar `AppNavGraph` dentro del tema, anotar con `@AndroidEntryPoint`
+- [x] **3.1** Destinos de navegación — `@Serializable` data objects/classes en `AppNavGraph.kt`: `Today`, `Calendar`, `History`, `TreatmentList`, `TreatmentForm(id?)`, `MedicationList(treatmentId)`, `MedicationForm(treatmentId, medicationId?)`, `MedicationDetail(medicationId)`, `Profile`, `PinLock(mode)`, `CaregiverHub`, `Settings`
+- [x] **3.2** `AppNavGraph.kt` — `NavHost` con todos los destinos registrados, pantalla inicial `Today`; bottom bar oculta en pantallas secundarias via `hasRoute`
+- [x] **3.3** `AppBottomBar` — 3 pestañas: Hoy, Calendario, Perfil con íconos Material3; `launchSingleTop + restoreState`
+- [x] **3.4** `MainActivity.kt` — reemplazado placeholder, `AppNavGraph` dentro del tema, `@AndroidEntryPoint`
+- [x] Stubs de todas las pantallas en sus respectivos paquetes `presentation/`
 
 ---
 
