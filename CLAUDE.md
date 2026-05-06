@@ -33,6 +33,7 @@ jvmToolchain = 17
 ```
 
 > `compileSdk` usa la nueva sintaxis de AGP 9 para Android 16. No usar `compileSdk = 36` plano.
+> AGP 9.2.1 registra la extensión `kotlin` internamente. No aplicar `kotlin-android` en el módulo app — causa conflicto "extension already registered". El plugin correcto es solo `kotlin-compose` (junto con `ksp` y `hilt-android`).
 
 ## Package y nombres
 
