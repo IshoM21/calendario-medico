@@ -6,7 +6,7 @@
 |------|-------------|--------|
 | 0 | Configuración base del proyecto | ✅ Completa |
 | 1 | Capa de datos (Room + DataStore) | ✅ Completa |
-| 2 | Capa de dominio (Use Cases) | ⬜ Pendiente |
+| 2 | Capa de dominio (Use Cases) | ✅ Completa |
 | 3 | Navegación y shell de UI | ⬜ Pendiente |
 | 4 | Pantalla Hoy — MVP funcional | ⬜ Pendiente |
 | 5 | Modo Cuidador y gestión de medicamentos | ⬜ Pendiente |
@@ -96,16 +96,17 @@
 
 ---
 
-## Fase 2 — Capa de dominio (Use Cases) ⬜
+## Fase 2 — Capa de dominio (Use Cases) ✅
 
 > Encapsular la lógica de negocio antes de tocar UI.
 
-- [ ] **2.1** `GenerateDailyIntakesUseCase` — genera registros de `MedicationIntake` para una fecha; aplica rango del tratamiento, días de semana, doseOverride; idempotente
-- [ ] **2.2** `GetTodayIntakesUseCase` — asegura tomas del día y retorna Flow agrupado por `TimeSlot`
-- [ ] **2.3** `MarkIntakeAsTakenUseCase` — status → `TAKEN`, guarda `confirmedAt`
-- [ ] **2.4** `SkipIntakeUseCase` — status → `SKIPPED` con nota opcional
-- [ ] **2.5** `CheckPendingDosesUseCase` — tomas `PENDING` cuyo horario pasó hace más de `pendingAlertDelayMinutes`
-- [ ] **2.6** `RescheduleRemindersUseCase` — cancela y reprograma todas las alarmas con AlarmManager según horarios configurados
+- [x] **2.1** `GenerateDailyIntakesUseCase` — genera registros de `MedicationIntake` para una fecha; aplica rango del tratamiento, días de semana, doseOverride; idempotente
+- [x] **2.2** `GetTodayIntakesUseCase` — asegura tomas del día y retorna Flow agrupado por `TimeSlot`
+- [x] **2.3** `MarkIntakeAsTakenUseCase` — status → `TAKEN`, guarda `confirmedAt`
+- [x] **2.4** `SkipIntakeUseCase` — status → `SKIPPED` con nota opcional
+- [x] **2.5** `CheckPendingDosesUseCase` — tomas `PENDING` cuyo horario pasó hace más de `pendingAlertDelayMinutes`
+- [x] **2.6** `RescheduleRemindersUseCase` — cancela y reprograma todas las alarmas con AlarmManager según horarios configurados
+  - `AlarmScheduler` interface en `core/notification/`; `NoOpAlarmScheduler` como stub; `NotificationModule` con `@Binds` — se sustituye la implementación real en Fase 8
 
 ---
 
