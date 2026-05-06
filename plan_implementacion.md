@@ -25,7 +25,7 @@
 
 - [ ] **0.1** Actualizar `gradle/libs.versions.toml` con versiones y librerías nuevas
   - KSP `2.2.10-2.0.2` (versión estable confirmada para Kotlin 2.2.10)
-  - Hilt + hilt-navigation-compose + hilt-work
+  - Hilt `2.59.2` (mínimo requerido para AGP 9.x — versiones anteriores usan BaseExtension removida)
   - Room (runtime, ktx, compiler)
   - Navigation Compose
   - DataStore Preferences
