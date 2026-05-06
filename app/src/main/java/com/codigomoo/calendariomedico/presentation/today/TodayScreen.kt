@@ -39,7 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.IntrinsicSize
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,7 +47,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.codigomoo.calendariomedico.core.date.toDisplayString
-import com.codigomoo.calendariomedico.core.date.toShortDisplayString
+
 import com.codigomoo.calendariomedico.domain.model.IntakeStatus
 import com.codigomoo.calendariomedico.domain.model.MedicationIntake
 import com.codigomoo.calendariomedico.domain.model.TimeSlot
