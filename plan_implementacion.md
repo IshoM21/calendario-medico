@@ -8,7 +8,7 @@
 | 1 | Capa de datos (Room + DataStore) | ✅ Completa |
 | 2 | Capa de dominio (Use Cases) | ✅ Completa |
 | 3 | Navegación y shell de UI | ✅ Completa |
-| 4 | Pantalla Hoy — MVP funcional | ⬜ Pendiente |
+| 4 | Pantalla Hoy — MVP funcional | ✅ Completa |
 | 5 | Modo Cuidador y gestión de medicamentos | ⬜ Pendiente |
 | 6 | Calendario, Historial y Detalle | ⬜ Pendiente |
 | 7 | Perfil del paciente | ⬜ Pendiente |
@@ -122,23 +122,21 @@
 
 ---
 
-## Fase 4 — Pantalla Hoy — MVP funcional ⬜
+## Fase 4 — Pantalla Hoy — MVP funcional ✅
 
 > El usuario puede ver y marcar sus medicamentos del día. Corazón de la app.
 
-- [ ] **4.1** `TodayUiState.kt` — data class con fecha, nombre del tratamiento, tomas agrupadas por `TimeSlot`, contadores, loading/empty/error
-- [ ] **4.2** `TodayViewModel.kt`
-  - Observa `GetTodayIntakesUseCase` con Flow
-  - Expone `StateFlow<TodayUiState>`
-  - Acción `markAsTaken(intakeId)`
-  - Acción `skipIntake(intakeId, note)`
-- [ ] **4.3** `TodayScreen.kt`
-  - Header con fecha y saludo con nombre del paciente
-  - Barra de progreso del día
-  - Sección por cada `TimeSlot` con tarjetas de medicamento
-  - Tarjeta: nombre, dosis, instrucción, color, botón "Tomar"
-  - Estado vacío si no hay tratamiento activo
-  - Estado "todo completado" al final del día
+- [x] **4.1** `TodayUiState.kt` — fecha, treatmentName, intakesBySlot, totalRequired/Taken, progressFraction, isAllDone
+- [x] **4.2** `TodayViewModel.kt` — `@HiltViewModel`; combina Flow de tratamiento activo + `GetTodayIntakesUseCase`; acciones `markAsTaken` y `skipIntake`
+- [x] **4.3** `TodayScreen.kt`
+  - Header card con fecha, tratamiento, LinearProgressIndicator y conteo "X de Y tomados"
+  - Secciones por TimeSlot (Mañana/Comida/Noche) con barra de acento de color
+  - `IntakeCard` con borde de color según estado, nombre, dosis, botón "Tomar ahora" + "Omitir"
+  - `IntakeStatusBadge`: ✓ con hora (TAKEN), "Omitida" (SKIPPED), "No tomada" (MISSED)
+  - Dialog de confirmación para omitir
+  - `AllDoneCard` — mensaje "¡Todo al día!" cuando no quedan PENDING
+  - `EmptyTreatmentState` — cuando no hay tratamiento activo
+- [x] Dependencia `lifecycle-runtime-compose` añadida para `collectAsStateWithLifecycle`
 
 ---
 
