@@ -9,7 +9,7 @@
 | 2 | Capa de dominio (Use Cases) | ✅ Completa |
 | 3 | Navegación y shell de UI | ✅ Completa |
 | 4 | Pantalla Hoy — MVP funcional | ✅ Completa |
-| 5 | Modo Cuidador y gestión de medicamentos | ⬜ Pendiente |
+| 5 | Modo Cuidador y gestión de medicamentos | ✅ Completa |
 | 6 | Calendario, Historial y Detalle | ⬜ Pendiente |
 | 7 | Perfil del paciente | ⬜ Pendiente |
 | 8 | Notificaciones | ⬜ Pendiente |
@@ -140,17 +140,18 @@
 
 ---
 
-## Fase 5 — Modo Cuidador y gestión de medicamentos ⬜
+## Fase 5 — Modo Cuidador y gestión de medicamentos ✅
 
 > El cuidador puede crear y editar el tratamiento. El paciente no puede.
 
-- [ ] **5.1** `PinManager.kt` en `security/` — `EncryptedSharedPreferences`; métodos: `hasPin()`, `setPin(raw)`, `verifyPin(raw): Boolean`; PIN guardado como hash SHA-256
-- [ ] **5.2** `CaregiverViewModel.kt` — estado `pinMode` (`NONE`, `SET`, `CONFIRM`, `ENTER`), `isUnlocked`, `error`; acciones `startSetPin()`, `submitPin(digits)`, `lock()`; resetea al ir a background
-- [ ] **5.3** `PinLockScreen.kt` — teclado numérico 4 dígitos, dots de progreso, modos crear/confirmar/ingresar, error animado, botón cancelar
-- [ ] **5.4** `CaregiverHubScreen.kt` — tarjetas de acceso: Historial, Mis Medicamentos, Agregar Medicamento; botón cerrar sesión
-- [ ] **5.5** `TreatmentFormScreen.kt` + `TreatmentViewModel.kt` — campos: nombre, descripción, DatePicker inicio/fin, estado activo; validación fecha fin > inicio
-- [ ] **5.6** `MedicationFormScreen.kt` + `MedicationViewModel.kt` — campos: nombre, dosis, instrucciones, selector `TimeSlot`, chips de días, `doseOverride` por día, toggle obligatorio/opcional, selector de color
-- [ ] **5.7** `MedicationListScreen.kt` — lista de medicamentos del tratamiento activo, FAB agregar, swipe-to-delete con confirmación
+- [x] **5.1** `PinManager.kt` — EncryptedSharedPreferences; `hasPin/setPin/verifyPin/clearPin`; hash SHA-256
+- [x] **5.2** `CaregiverViewModel.kt` — `PinMode(SET/CONFIRM/ENTER)`, buffer de dígitos, `onDigit/onDelete/processPin`; navega a CaregiverHub en `isSuccess=true`
+- [x] **5.3** `PinLockScreen.kt` — teclado 4×3 con círculos OutlinedButton, 4 dots con color de error, LaunchedEffect para init y navegación
+- [x] **5.4** `CaregiverHubScreen.kt` + `CaregiverHubViewModel` — tarjetas clicables: Tratamientos, Medicamentos, Agregar, Historial, Ajustes; muestra tratamiento activo; botón "Cerrar sesión"
+- [x] **5.5** `TreatmentViewModel.kt` + `TreatmentFormScreen.kt` — nombre, descripción, DatePickerDialog inicio/fin, switch activo; `TreatmentListScreen` con FAB y confirmación de borrado
+- [x] **5.6** `MedicationViewModel.kt` + `MedicationFormScreen.kt` — SegmentedButton para TimeSlot, FilterChips días, doseOverride por día seleccionado, switch obligatorio, selector de color con 8 colores preset
+- [x] **5.7** `MedicationListScreen.kt` — lista con borde de color, FAB agregar, confirmación de borrado
+- [x] `ProfileScreen.kt` actualizado con botón "Modo Cuidador" → `PinLock("enter")`
 
 ---
 
