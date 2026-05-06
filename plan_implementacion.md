@@ -4,7 +4,7 @@
 
 | Fase | Descripción | Estado |
 |------|-------------|--------|
-| 0 | Configuración base del proyecto | ⬜ Pendiente |
+| 0 | Configuración base del proyecto | ✅ Completa |
 | 1 | Capa de datos (Room + DataStore) | ⬜ Pendiente |
 | 2 | Capa de dominio (Use Cases) | ⬜ Pendiente |
 | 3 | Navegación y shell de UI | ⬜ Pendiente |
@@ -19,7 +19,7 @@
 
 ---
 
-## Fase 0 — Configuración base del proyecto ⬜
+## Fase 0 — Configuración base del proyecto ✅
 
 > Dejar el proyecto listo para construir sobre él. Sin esta fase nada compila.
 
