@@ -1,6 +1,5 @@
 package com.codigomoo.calendariomedico.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -11,33 +10,52 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+private val LightColors = lightColorScheme(
+    primary = Teal40,
+    onPrimary = Neutral99,
+    primaryContainer = Teal80,
+    onPrimaryContainer = Teal10,
+    secondary = SlateBlue40,
+    onSecondary = Neutral99,
+    secondaryContainer = SlateBlue90,
+    onSecondaryContainer = SlateBlue20,
+    background = Neutral90,
+    onBackground = SlateBlue20,
+    surface = Neutral95,
+    onSurface = SlateBlue20,
+    surfaceVariant = SlateBlue90,
+    onSurfaceVariant = SlateBlue40,
+    error = Red40,
+    onError = Neutral99,
+    errorContainer = Red90,
+    onErrorContainer = Red10,
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+private val DarkColors = darkColorScheme(
+    primary = Teal80,
+    onPrimary = Teal20,
+    primaryContainer = Teal30,
+    onPrimaryContainer = Teal90,
+    secondary = SlateBlue80,
+    onSecondary = SlateBlue20,
+    secondaryContainer = SlateBlue40,
+    onSecondaryContainer = SlateBlue90,
+    background = Neutral10,
+    onBackground = SlateBlue90,
+    surface = Neutral20,
+    onSurface = SlateBlue90,
+    surfaceVariant = SlateBlue40,
+    onSurfaceVariant = SlateBlue80,
+    error = Red80,
+    onError = Red10,
+    errorContainer = Red40,
+    onErrorContainer = Red90,
 )
 
 @Composable
 fun CalendarioMedicoTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -45,9 +63,8 @@ fun CalendarioMedicoTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> DarkColors
+        else -> LightColors
     }
 
     MaterialTheme(
