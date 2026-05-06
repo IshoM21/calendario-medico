@@ -5,7 +5,7 @@
 | Fase | Descripción | Estado |
 |------|-------------|--------|
 | 0 | Configuración base del proyecto | ✅ Completa |
-| 1 | Capa de datos (Room + DataStore) | ⬜ Pendiente |
+| 1 | Capa de datos (Room + DataStore) | ✅ Completa |
 | 2 | Capa de dominio (Use Cases) | ⬜ Pendiente |
 | 3 | Navegación y shell de UI | ⬜ Pendiente |
 | 4 | Pantalla Hoy — MVP funcional | ⬜ Pendiente |
@@ -63,36 +63,36 @@
 
 ---
 
-## Fase 1 — Capa de datos (Room + DataStore) ⬜
+## Fase 1 — Capa de datos (Room + DataStore) ✅
 
 > La app puede persistir y leer datos. Sin lógica de UI aún.
 
-- [ ] **1.1** Modelos de dominio en `domain/model/`
+- [x] **1.1** Modelos de dominio en `domain/model/`
   - `TimeSlot.kt` — enum: `MORNING`, `NOON`, `NIGHT`, `AS_NEEDED`
   - `IntakeStatus.kt` — enum: `PENDING`, `TAKEN`, `SKIPPED`, `MISSED`, `OPTIONAL`
   - `Treatment.kt`
   - `Medication.kt`
   - `MedicationSchedule.kt`
   - `MedicationIntake.kt`
-- [ ] **1.2** Entidades Room en `data/local/entity/`
+- [x] **1.2** Entidades Room en `data/local/entity/`
   - `TreatmentEntity.kt`
   - `MedicationEntity.kt`
   - `MedicationScheduleEntity.kt` (con `dayOfWeek` y `doseOverride`)
   - `MedicationIntakeEntity.kt` (con `status`, `confirmedAt`, `notes`)
   - Cada entidad con `fun toDomain()` y `companion fun fromDomain()`
-- [ ] **1.3** DAOs en `data/local/dao/`
+- [x] **1.3** DAOs en `data/local/dao/`
   - `TreatmentDao.kt` — CRUD + Flow de tratamiento activo
   - `MedicationDao.kt` — CRUD + query por treatmentId
   - `ScheduleDao.kt` — query por medicationId + dayOfWeek
   - `IntakeDao.kt` — queries por fecha, rango, estado; update de status
-- [ ] **1.4** `AppDatabase.kt` — Room Database con las 4 entidades, versión 1, TypeConverters para `LocalDate`, `LocalTime`, `LocalDateTime` y enums; usar `fallbackToDestructiveMigration()` durante desarrollo
-- [ ] **1.5** Repositorios en `data/repository/`
+- [x] **1.4** `AppDatabase.kt` — Room Database con las 4 entidades, versión 1, TypeConverters para `LocalDate`, `LocalTime`, `LocalDateTime` y enums; usar `fallbackToDestructiveMigration()` durante desarrollo
+- [x] **1.5** Repositorios en `data/repository/`
   - `TreatmentRepository.kt`
   - `MedicationRepository.kt`
   - `IntakeRepository.kt`
-- [ ] **1.6** `ReminderPreferences.kt` — DataStore con `morningTime`, `noonTime`, `nightTime`, `pendingAlertDelayMinutes`, `notificationsEnabled`
-- [ ] **1.7** `AppModule.kt` en `di/` — proveer `AppDatabase`, repositorios y `ReminderPreferences` con Hilt
-- [ ] **1.8** `DateUtils.kt` en `core/date/` — centralizar formateo de fechas con `Locale("es", "MX")` para que toda la app muestre fechas en español independientemente del locale del dispositivo
+- [x] **1.6** `ReminderPreferences.kt` — DataStore con `morningTime`, `noonTime`, `nightTime`, `pendingAlertDelayMinutes`, `notificationsEnabled`
+- [x] **1.7** `AppModule.kt` en `di/` — proveer `AppDatabase`, repositorios y `ReminderPreferences` con Hilt
+- [x] **1.8** `DateUtils.kt` en `core/date/` — centralizar formateo de fechas con `Locale("es", "MX")` para que toda la app muestre fechas en español independientemente del locale del dispositivo
 
 ---
 
