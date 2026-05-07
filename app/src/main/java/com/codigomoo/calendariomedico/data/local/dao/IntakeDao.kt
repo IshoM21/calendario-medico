@@ -22,6 +22,9 @@ interface IntakeDao {
     @Query("SELECT * FROM medication_intakes WHERE status = :status AND date <= :date")
     suspend fun getPendingUntil(status: IntakeStatus, date: LocalDate): List<MedicationIntakeEntity>
 
+    @Query("SELECT * FROM medication_intakes WHERE medicationId = :medicationId AND date BETWEEN :startDate AND :endDate ORDER BY date ASC")
+    fun getByMedicationAndDateRange(medicationId: Long, startDate: LocalDate, endDate: LocalDate): Flow<List<MedicationIntakeEntity>>
+
     @Query("SELECT * FROM medication_intakes WHERE medicationId = :medicationId AND status = :status ORDER BY confirmedAt DESC LIMIT 1")
     suspend fun getLastTaken(medicationId: Long, status: IntakeStatus): MedicationIntakeEntity?
 
@@ -33,4 +36,7 @@ interface IntakeDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM medication_intakes WHERE medicationId = :medicationId AND date = :date)")
     suspend fun existsForDay(medicationId: Long, date: LocalDate): Boolean
+
+    @Query("DELETE FROM medication_intakes WHERE treatmentId = :treatmentId AND date >= :fromDate AND (status = 'PENDING' OR status = 'OPTIONAL')")
+    suspend fun deleteFuturePending(treatmentId: Long, fromDate: LocalDate)
 }

@@ -28,6 +28,8 @@ class ReminderPreferences @Inject constructor(
         val NIGHT_TIME = stringPreferencesKey("night_time")
         val PENDING_ALERT_DELAY_MINUTES = intPreferencesKey("pending_alert_delay_minutes")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+        val PATIENT_NAME = stringPreferencesKey("patient_name")
+        val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
     }
 
     val morningTime: Flow<LocalTime> = context.dataStore.data.map { prefs ->
@@ -50,6 +52,10 @@ class ReminderPreferences @Inject constructor(
         prefs[Keys.NOTIFICATIONS_ENABLED] ?: true
     }
 
+    val patientName: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.PATIENT_NAME] ?: ""
+    }
+
     suspend fun setMorningTime(time: LocalTime) {
         context.dataStore.edit { it[Keys.MORNING_TIME] = time.toString() }
     }
@@ -68,5 +74,17 @@ class ReminderPreferences @Inject constructor(
 
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         context.dataStore.edit { it[Keys.NOTIFICATIONS_ENABLED] = enabled }
+    }
+
+    suspend fun setPatientName(name: String) {
+        context.dataStore.edit { it[Keys.PATIENT_NAME] = name }
+    }
+
+    val hasCompletedOnboarding: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false
+    }
+
+    suspend fun setHasCompletedOnboarding(value: Boolean) {
+        context.dataStore.edit { it[Keys.HAS_COMPLETED_ONBOARDING] = value }
     }
 }

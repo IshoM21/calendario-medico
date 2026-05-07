@@ -1,7 +1,7 @@
 package com.codigomoo.calendariomedico.di
 
 import com.codigomoo.calendariomedico.core.notification.AlarmScheduler
-import com.codigomoo.calendariomedico.core.notification.NoOpAlarmScheduler
+import com.codigomoo.calendariomedico.core.notification.ReminderAlarmScheduler
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -14,5 +14,5 @@ abstract class NotificationModule {
 
     @Binds
     @Singleton
-    abstract fun bindAlarmScheduler(impl: NoOpAlarmScheduler): AlarmScheduler
+    abstract fun bindAlarmScheduler(impl: ReminderAlarmScheduler): AlarmScheduler
 }

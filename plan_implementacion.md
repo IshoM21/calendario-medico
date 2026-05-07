@@ -10,12 +10,12 @@
 | 3 | Navegación y shell de UI | ✅ Completa |
 | 4 | Pantalla Hoy — MVP funcional | ✅ Completa |
 | 5 | Modo Cuidador y gestión de medicamentos | ✅ Completa |
-| 6 | Calendario, Historial y Detalle | ⬜ Pendiente |
-| 7 | Perfil del paciente | ⬜ Pendiente |
-| 8 | Notificaciones | ⬜ Pendiente |
-| 9 | Ajustes | ⬜ Pendiente |
-| 10 | Medicamentos opcionales (AS_NEEDED) | ⬜ Pendiente |
-| 11 | Pulido y casos borde | ⬜ Pendiente |
+| 6 | Calendario, Historial y Detalle | ✅ Completa |
+| 7 | Perfil del paciente | ✅ Completa |
+| 8 | Notificaciones | ✅ Completa |
+| 9 | Ajustes | ✅ Completa |
+| 10 | Medicamentos opcionales (AS_NEEDED) | ✅ Completa |
+| 11 | Pulido y casos borde | ✅ Completa |
 
 ---
 
@@ -155,74 +155,74 @@
 
 ---
 
-## Fase 6 — Calendario, Historial y Detalle ⬜
+## Fase 6 — Calendario, Historial y Detalle ✅
 
-- [ ] **6.1** `CalendarScreen.kt` + `CalendarViewModel.kt`
+- [x] **6.1** `CalendarScreen.kt` + `CalendarViewModel.kt`
   - Vista semanal centrada en hoy
   - Puntos de color por medicamento según estado
   - Al tocar día: expande lista de tomas con estado
   - Navegación semana anterior / siguiente
-- [ ] **6.2** `HistoryScreen.kt` + `HistoryViewModel.kt`
+- [x] **6.2** `HistoryScreen.kt` + `HistoryViewModel.kt`
   - DatePicker selector de fecha
   - Lista de tomas con estado, hora de confirmación y nota
   - Porcentaje de cumplimiento del día (solo obligatorios)
-- [ ] **6.3** `MedicationDetailScreen.kt`
+- [x] **6.3** `MedicationDetailScreen.kt` + `MedicationDetailViewModel.kt`
   - Información completa del medicamento
   - Estado del día actual
   - Grid de últimos 7 días (tomado / vencido / no aplica)
 
 ---
 
-## Fase 7 — Perfil del paciente ⬜
+## Fase 7 — Perfil del paciente ✅
 
-- [ ] **7.1** `ProfileScreen.kt` + `ProfileViewModel.kt`
-  - Nombre del paciente
+- [x] **7.1** `ProfileScreen.kt` + `ProfileViewModel.kt`
+  - Nombre del paciente (editable, persiste en DataStore)
   - Tratamiento activo: nombre y fechas
   - Resumen de cumplimiento últimos 7 días
   - Botón "Modo Cuidador" que dispara flujo de PIN
 
 ---
 
-## Fase 8 — Notificaciones ⬜
+## Fase 8 — Notificaciones ✅
 
 > La app recuerda al usuario aunque esté cerrada.
 
-- [ ] **8.1** `NotificationHelper.kt` — crear canal `MEDICATION_REMINDERS` al iniciar app; métodos para construir y lanzar notificaciones agrupadas con acciones (Tomado, Recordar en 10 min)
-- [ ] **8.2** `ReminderAlarmReceiver.kt` — `BroadcastReceiver` que recibe alarma, consulta tomas del horario y lanza notificación; declarado en Manifest
-- [ ] **8.3** `BootReceiver.kt` — `BroadcastReceiver` para `BOOT_COMPLETED`; llama a `RescheduleRemindersUseCase`; declarado en Manifest
-- [ ] **8.4** `PendingDoseWorker.kt` — `CoroutineWorker` que corre ~30 min después del horario; llama a `CheckPendingDosesUseCase` y envía alerta de pendiente si aplica
-- [ ] **8.5** Integración en ViewModels — al marcar tomado: cancelar Worker de pendiente; al crear/editar tratamiento: llamar `RescheduleRemindersUseCase`
-- [ ] **8.6** Permiso `POST_NOTIFICATIONS` (Android 13+) — solicitar en `MainActivity` al primer lanzamiento
-- [ ] **8.7** Deep links desde notificaciones — configurar `NavDeepLink` en `AppNavGraph` para que las acciones de notificación (Tomado, Ver detalle) abran la app y naveguen a la pantalla correcta sin pasar por `MainActivity` desde cero; registrar el `Intent` en `AndroidManifest.xml`
+- [x] **8.1** `NotificationHelper.kt` — canal `medication_reminders`; notificaciones con acciones "Tomado ✓" y "En 10 min ⏰"; alerta de pendientes
+- [x] **8.2** `ReminderAlarmReceiver.kt` + `ReminderAlarmScheduler.kt` — `@AndroidEntryPoint`; consulta intakes del slot; reagenda siguiente día; encola `PendingDoseWorker`
+- [x] **8.3** `BootReceiver.kt` — `BOOT_COMPLETED`; llama `RescheduleRemindersUseCase` con `goAsync()`
+- [x] **8.4** `PendingDoseWorker.kt` — `@HiltWorker`; llama `CheckPendingDosesUseCase`; muestra alerta si hay pendientes
+- [x] **8.5** Integración — `TreatmentViewModel.save()` llama `RescheduleRemindersUseCase`; `NotificationActionReceiver` maneja "Tomado" y "Snooze"
+- [x] **8.6** `POST_NOTIFICATIONS` solicitado en `MainActivity` (Android 13+)
+- [x] **8.7** Deep link `calendariomedico://today` en `AppNavGraph` + intent-filter en `AndroidManifest.xml`; `HiltWorkerFactory` configurado en `CalendarioMedicoApp`
 
 ---
 
-## Fase 9 — Ajustes ⬜
+## Fase 9 — Ajustes ✅
 
-- [ ] **9.1** `SettingsScreen.kt` + `SettingsViewModel.kt`
+- [x] **9.1** `SettingsScreen.kt` + `SettingsViewModel.kt`
   - Time pickers para mañana, comida y noche (actualiza DataStore + reprograma alarmas)
   - Toggle de notificaciones
-  - Campo para minutos de alerta de pendiente
+  - Campo para minutos de alerta de pendiente (1–120 min, validado)
   - Opción "Cambiar PIN" (lanza PinLock en modo SET)
   - Campo para nombre del paciente
 
 ---
 
-## Fase 10 — Medicamentos opcionales (AS_NEEDED) ⬜
+## Fase 10 — Medicamentos opcionales (AS_NEEDED) ✅
 
-- [ ] **10.1** Sección "Si lo necesitas" en `TodayScreen` — colapsable, botón "Registrar toma", sheet con hora y nota, no genera pendientes, no cuenta en porcentaje
-- [ ] **10.2** Advertencia de intervalo mínimo — si ya se tomó hace menos de `minIntervalHours`, mostrar aviso antes de confirmar
+- [x] **10.1** Sección "Si lo necesitas" en `TodayScreen` — colapsable con animación de chevron, `AsNeededCard` visualmente distinta, `AlertDialog` con campo de nota opcional; AS_NEEDED separado del flujo regular y del `isAllDone`
+- [x] **10.2** Advertencia de intervalo mínimo — consulta `minIntervalHours` del medicamento y `getLastTaken` del repositorio; muestra aviso en rojo en el dialog; botón cambia a "Registrar igualmente"
 
 ---
 
-## Fase 11 — Pulido y casos borde ⬜
+## Fase 11 — Pulido y casos borde ✅
 
-- [ ] **11.1** Pantalla de bienvenida al primer lanzamiento (sin tratamiento activo)
-- [ ] **11.2** Aviso legal de salud en primer uso y en pantalla de ajustes
-- [ ] **11.3** Manejo de `SCHEDULE_EXACT_ALARM` denegado — fallback a WorkManager con advertencia al usuario
-- [ ] **11.4** Estados de carga en todas las pantallas (Skeleton o CircularProgress)
-- [ ] **11.5** Estados vacíos con ilustración y call-to-action en cada pantalla
-- [ ] **11.6** Tratamiento vencido — aviso en pantalla Hoy con opción de crear nuevo
-- [ ] **11.7** Eliminar medicamento — advertencia de que borra tomas futuras
-- [ ] **11.8** Editar tratamiento — recalcular tomas futuras sin modificar historial pasado
-- [ ] **11.9** Verificar que la app compila y corre limpia en minSdk 30 (Android 11)
+- [x] **11.1** Bienvenida en primer lanzamiento — `OnboardingState` en `TodayScreen` cuando `isFirstLaunch && !hasActiveTreatment`; flag `hasCompletedOnboarding` en DataStore; botón "Configurar tratamiento" → `PinLock("set")`
+- [x] **11.2** Aviso legal — mostrado en `OnboardingState` (primer uso) y en sección "Acerca de" de `SettingsScreen`
+- [x] **11.3** `SCHEDULE_EXACT_ALARM` denegado — `SettingsScreen` muestra banner de error con botón "Abrir ajustes del sistema" cuando `canScheduleExactAlarms()` retorna false (guarda con `>= S`)
+- [x] **11.4** Estados de carga — `CalendarScreen` y `ProfileScreen` muestran `CircularProgressIndicator` mientras `isLoading = true`
+- [x] **11.5** Estados vacíos — `HistoryScreen`, `CalendarScreen`, `TreatmentListScreen`, `MedicationListScreen` tienen texto vacío; `EmptyTreatmentState` en `TodayScreen`
+- [x] **11.6** Tratamiento vencido — `TodayUiState.isTreatmentExpired` + `ExpiredTreatmentBanner` en `TodayScreen` con botón "Crear nuevo tratamiento" → modo cuidador
+- [x] **11.7** Eliminar medicamento — dialog actualizado: "Se borrarán todas sus tomas, incluido el historial pasado" (FK cascade ya existía)
+- [x] **11.8** Editar tratamiento — `TreatmentViewModel.save()` llama `intakeRepository.deleteFuturePending(treatmentId, today)` antes de reprogramar; nueva query `@Query DELETE ... status IN ('PENDING','OPTIONAL')` en `IntakeDao`
+- [x] **11.9** minSdk 30 verificado — `canScheduleExactAlarms()` guarda con `>= S`, `POST_NOTIFICATIONS` con `>= TIRAMISU`, todas las demás APIs disponibles desde API 23

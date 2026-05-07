@@ -14,10 +14,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavDeepLink
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
 import com.codigomoo.calendariomedico.presentation.calendar.CalendarScreen
 import com.codigomoo.calendariomedico.presentation.caregiver.CaregiverHubScreen
@@ -68,14 +70,16 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
             startDestination = Route.Today,
             modifier = modifier
         ) {
-            composable<Route.Today> {
+            composable<Route.Today>(
+                deepLinks = listOf(navDeepLink { uriPattern = "calendariomedico://today" })
+            ) {
                 TodayScreen(navController = navController, innerPadding = innerPadding)
             }
             composable<Route.Calendar> {
                 CalendarScreen(navController = navController, innerPadding = innerPadding)
             }
             composable<Route.History> {
-                HistoryScreen(navController = navController)
+                HistoryScreen(navController = navController, innerPadding = innerPadding)
             }
             composable<Route.Profile> {
                 ProfileScreen(navController = navController, innerPadding = innerPadding)

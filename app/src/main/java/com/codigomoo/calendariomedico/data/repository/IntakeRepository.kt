@@ -25,6 +25,9 @@ class IntakeRepository @Inject constructor(
     fun getByDateRange(startDate: LocalDate, endDate: LocalDate): Flow<List<MedicationIntake>> =
         dao.getByDateRange(startDate, endDate).map { list -> list.map { it.toDomain() } }
 
+    fun getByMedicationAndDateRange(medicationId: Long, startDate: LocalDate, endDate: LocalDate): Flow<List<MedicationIntake>> =
+        dao.getByMedicationAndDateRange(medicationId, startDate, endDate).map { list -> list.map { it.toDomain() } }
+
     suspend fun getPendingUntil(date: LocalDate): List<MedicationIntake> =
         dao.getPendingUntil(IntakeStatus.PENDING, date).map { it.toDomain() }
 
@@ -45,4 +48,7 @@ class IntakeRepository @Inject constructor(
 
     suspend fun existsForDay(medicationId: Long, date: LocalDate): Boolean =
         dao.existsForDay(medicationId, date)
+
+    suspend fun deleteFuturePending(treatmentId: Long, fromDate: LocalDate) =
+        dao.deleteFuturePending(treatmentId, fromDate)
 }

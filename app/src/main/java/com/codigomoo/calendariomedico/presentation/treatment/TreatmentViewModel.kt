@@ -2,8 +2,10 @@ package com.codigomoo.calendariomedico.presentation.treatment
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.codigomoo.calendariomedico.data.repository.IntakeRepository
 import com.codigomoo.calendariomedico.data.repository.TreatmentRepository
 import com.codigomoo.calendariomedico.domain.model.Treatment
+import com.codigomoo.calendariomedico.domain.usecase.RescheduleRemindersUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +30,9 @@ data class TreatmentFormState(
 
 @HiltViewModel
 class TreatmentViewModel @Inject constructor(
-    private val treatmentRepository: TreatmentRepository
+    private val treatmentRepository: TreatmentRepository,
+    private val intakeRepository: IntakeRepository,
+    private val rescheduleRemindersUseCase: RescheduleRemindersUseCase
 ) : ViewModel() {
 
     val treatments = treatmentRepository.getAll()
@@ -88,6 +92,10 @@ class TreatmentViewModel @Inject constructor(
             )
             val savedId = treatmentRepository.save(treatment)
             if (s.isActive) treatmentRepository.activate(savedId)
+            if (treatmentId != null) {
+                intakeRepository.deleteFuturePending(savedId, LocalDate.now())
+            }
+            rescheduleRemindersUseCase()
             _form.update { it.copy(isSaving = false, isSaved = true) }
         }
     }

@@ -64,7 +64,7 @@ fun MedicationListScreen(
         AlertDialog(
             onDismissRequest = { medicationToDelete = null },
             title = { Text("Eliminar medicamento") },
-            text = { Text("¿Eliminar \"${med.name}\"? Se eliminarán sus tomas programadas.") },
+            text = { Text("¿Eliminar \"${med.name}\"? Se borrarán todas sus tomas, incluido el historial pasado.") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.delete(med)
