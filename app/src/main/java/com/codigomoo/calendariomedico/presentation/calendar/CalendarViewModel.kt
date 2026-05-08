@@ -26,7 +26,7 @@ import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 
 data class CalendarUiState(
-    val weekStart: LocalDate = mondayOfCurrentWeek(),
+    val weekStart: LocalDate = weekStartFor(LocalDate.now(), DayOfWeek.MONDAY),
     val selectedDate: LocalDate = LocalDate.now(),
     val weekIntakesByDate: Map<LocalDate, List<MedicationIntake>> = emptyMap(),
     val monthIntakesByDate: Map<LocalDate, List<MedicationIntake>> = emptyMap(),
@@ -35,11 +35,12 @@ data class CalendarUiState(
     val morningTime: LocalTime = LocalTime.of(8, 0),
     val noonTime: LocalTime = LocalTime.of(13, 0),
     val nightTime: LocalTime = LocalTime.of(21, 0),
+    val firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
     val isLoading: Boolean = true
 )
 
-fun mondayOfCurrentWeek(): LocalDate =
-    LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+fun weekStartFor(date: LocalDate, firstDay: DayOfWeek): LocalDate =
+    date.with(TemporalAdjusters.previousOrSame(firstDay))
 
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
@@ -48,7 +49,7 @@ class CalendarViewModel @Inject constructor(
     private val reminderPreferences: ReminderPreferences
 ) : ViewModel() {
 
-    private val _weekStart = MutableStateFlow(mondayOfCurrentWeek())
+    private val _weekStart = MutableStateFlow(weekStartFor(LocalDate.now(), DayOfWeek.MONDAY))
     private val _selectedDate = MutableStateFlow(LocalDate.now())
 
     private val monthStartFlow = _selectedDate
@@ -66,19 +67,29 @@ class CalendarViewModel @Inject constructor(
         )
     }
 
-    private val slotTimesFlow = combine(
+    private data class CalendarPrefs(
+        val morning: LocalTime,
+        val noon: LocalTime,
+        val night: LocalTime,
+        val firstDayOfWeek: DayOfWeek
+    )
+
+    private val prefsFlow = combine(
         reminderPreferences.morningTime,
         reminderPreferences.noonTime,
-        reminderPreferences.nightTime
-    ) { morning, noon, night -> Triple(morning, noon, night) }
+        reminderPreferences.nightTime,
+        reminderPreferences.firstDayOfWeek
+    ) { morning, noon, night, firstDay ->
+        CalendarPrefs(morning, noon, night, firstDay)
+    }
 
     val uiState: StateFlow<CalendarUiState> = combine(
         _weekStart,
         _selectedDate,
         weekIntakesFlow,
         monthIntakesFlow,
-        slotTimesFlow
-    ) { weekStart, selected, weekIntakes, monthIntakes, slotTimes ->
+        prefsFlow
+    ) { weekStart, selected, weekIntakes, monthIntakes, prefs ->
         val weekByDate = weekIntakes.groupBy { it.date }
         val monthByDate = monthIntakes.groupBy { it.date }
         val selectedIntakes = (monthByDate[selected] ?: weekByDate[selected] ?: emptyList())
@@ -93,14 +104,22 @@ class CalendarViewModel @Inject constructor(
             nextPendingIntakeId = if (selected == LocalDate.now())
                 selectedIntakes.firstOrNull { it.status == IntakeStatus.PENDING }?.id
             else null,
-            morningTime = slotTimes.first,
-            noonTime = slotTimes.second,
-            nightTime = slotTimes.third,
+            morningTime = prefs.morning,
+            noonTime = prefs.noon,
+            nightTime = prefs.night,
+            firstDayOfWeek = prefs.firstDayOfWeek,
             isLoading = false
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CalendarUiState())
 
     init {
+        // Realign week start when first-day preference changes
+        viewModelScope.launch {
+            reminderPreferences.firstDayOfWeek.collect { firstDay ->
+                _weekStart.value = weekStartFor(_selectedDate.value, firstDay)
+            }
+        }
+        // Pre-generate intakes for visible dates
         viewModelScope.launch {
             combine(_weekStart, monthStartFlow) { w, m -> w to m }
                 .distinctUntilChanged()

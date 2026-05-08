@@ -32,6 +32,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,6 +75,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.codigomoo.calendariomedico.core.date.toDisplayString
 import com.codigomoo.calendariomedico.presentation.navigation.Route
+import java.time.DayOfWeek
 import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,6 +111,7 @@ fun SettingsScreen(navController: NavController) {
     var notifEnabledDraft by remember { mutableStateOf(true) }
     var minutesDraft      by remember { mutableStateOf("30") }
     var patientNameDraft  by remember { mutableStateOf("") }
+    var firstDayDraft     by remember { mutableStateOf(DayOfWeek.MONDAY) }
 
     LaunchedEffect(uiState.isLoading) {
         if (!uiState.isLoading) {
@@ -116,6 +121,7 @@ fun SettingsScreen(navController: NavController) {
             notifEnabledDraft = uiState.notificationsEnabled
             minutesDraft      = uiState.pendingAlertDelayMinutes.toString()
             patientNameDraft  = uiState.patientName
+            firstDayDraft     = uiState.firstDayOfWeek
         }
     }
 
@@ -125,7 +131,8 @@ fun SettingsScreen(navController: NavController) {
         nightTimeDraft    != uiState.nightTime ||
         notifEnabledDraft != uiState.notificationsEnabled ||
         (minutesDraft.toIntOrNull() ?: -1) != uiState.pendingAlertDelayMinutes ||
-        patientNameDraft.trim() != uiState.patientName
+        patientNameDraft.trim() != uiState.patientName ||
+        firstDayDraft != uiState.firstDayOfWeek
     )
 
     var isSaving by remember { mutableStateOf(false) }
@@ -175,7 +182,8 @@ fun SettingsScreen(navController: NavController) {
                                             nightTime = nightTimeDraft,
                                             notificationsEnabled = notifEnabledDraft,
                                             delayMinutes = mins,
-                                            patientName = patientNameDraft.trim()
+                                            patientName = patientNameDraft.trim(),
+                                            firstDayOfWeek = firstDayDraft
                                         )
                                         navController.popBackStack()
                                     } finally {
@@ -212,6 +220,16 @@ fun SettingsScreen(navController: NavController) {
                     TimeRow("Comida", noonTimeDraft) { showNoonPicker = true }
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
                     TimeRow("Noche", nightTimeDraft) { showNightPicker = true }
+                }
+            }
+
+            item { SectionLabel("Calendario") }
+            item {
+                SettingsCard {
+                    FirstDayRow(
+                        selected = firstDayDraft,
+                        onSelect = { firstDayDraft = it }
+                    )
                 }
             }
 
@@ -495,6 +513,32 @@ private fun ClickableRow(label: String, onClick: () -> Unit) {
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FirstDayRow(selected: DayOfWeek, onSelect: (DayOfWeek) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Primer día de semana", style = MaterialTheme.typography.bodyLarge)
+        SingleChoiceSegmentedButtonRow {
+            SegmentedButton(
+                selected = selected == DayOfWeek.MONDAY,
+                onClick = { onSelect(DayOfWeek.MONDAY) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+            ) { Text("Lunes", style = MaterialTheme.typography.labelMedium) }
+            SegmentedButton(
+                selected = selected == DayOfWeek.SUNDAY,
+                onClick = { onSelect(DayOfWeek.SUNDAY) },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+            ) { Text("Domingo", style = MaterialTheme.typography.labelMedium) }
+        }
     }
 }
 

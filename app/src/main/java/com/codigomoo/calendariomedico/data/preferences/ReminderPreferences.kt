@@ -11,6 +11,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.DayOfWeek
 import java.time.LocalTime
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,6 +31,7 @@ class ReminderPreferences @Inject constructor(
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val PATIENT_NAME = stringPreferencesKey("patient_name")
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
+        val FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
     }
 
     val morningTime: Flow<LocalTime> = context.dataStore.data.map { prefs ->
@@ -86,5 +88,13 @@ class ReminderPreferences @Inject constructor(
 
     suspend fun setHasCompletedOnboarding(value: Boolean) {
         context.dataStore.edit { it[Keys.HAS_COMPLETED_ONBOARDING] = value }
+    }
+
+    val firstDayOfWeek: Flow<DayOfWeek> = context.dataStore.data.map { prefs ->
+        DayOfWeek.of(prefs[Keys.FIRST_DAY_OF_WEEK] ?: DayOfWeek.MONDAY.value)
+    }
+
+    suspend fun setFirstDayOfWeek(day: DayOfWeek) {
+        context.dataStore.edit { it[Keys.FIRST_DAY_OF_WEEK] = day.value }
     }
 }

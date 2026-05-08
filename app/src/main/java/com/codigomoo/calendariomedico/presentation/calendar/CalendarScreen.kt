@@ -54,8 +54,20 @@ import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 private val LOCALE_ES = Locale("es", "MX")
-private val WEEK_LETTERS = listOf("L", "M", "X", "J", "V", "S", "D")
 private val TIME_FMT = DateTimeFormatter.ofPattern("H:mm")
+
+private val DAY_LETTER = mapOf(
+    DayOfWeek.MONDAY to "L",
+    DayOfWeek.TUESDAY to "M",
+    DayOfWeek.WEDNESDAY to "X",
+    DayOfWeek.THURSDAY to "J",
+    DayOfWeek.FRIDAY to "V",
+    DayOfWeek.SATURDAY to "S",
+    DayOfWeek.SUNDAY to "D"
+)
+
+private fun weekLettersFor(firstDay: DayOfWeek): List<String> =
+    (0..6).map { DAY_LETTER[firstDay.plus(it.toLong())]!! }
 
 enum class MonthDayStatus { NONE, COMPLETE, PARTIAL, MISSED }
 
@@ -111,6 +123,7 @@ fun CalendarScreen(
                 weekStart = uiState.weekStart,
                 selectedDate = uiState.selectedDate,
                 intakesByDate = uiState.weekIntakesByDate,
+                firstDayOfWeek = uiState.firstDayOfWeek,
                 onPrevious = viewModel::previous,
                 onNext = viewModel::next,
                 onDayClick = viewModel::selectDate,
@@ -137,6 +150,7 @@ fun CalendarScreen(
                 monthStart = uiState.selectedDate.withDayOfMonth(1),
                 selectedDate = uiState.selectedDate,
                 intakesByDate = uiState.monthIntakesByDate,
+                firstDayOfWeek = uiState.firstDayOfWeek,
                 onDayClick = viewModel::selectDate,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
@@ -149,11 +163,13 @@ private fun WeekStrip(
     weekStart: LocalDate,
     selectedDate: LocalDate,
     intakesByDate: Map<LocalDate, List<MedicationIntake>>,
+    firstDayOfWeek: DayOfWeek,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onDayClick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val weekLetters = weekLettersFor(firstDayOfWeek)
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -170,7 +186,7 @@ private fun WeekStrip(
                 val date = weekStart.plusDays(i.toLong())
                 WeekDayCell(
                     date = date,
-                    letter = WEEK_LETTERS[i],
+                    letter = weekLetters[i],
                     isSelected = date == selectedDate,
                     isToday = date == LocalDate.now(),
                     intakes = intakesByDate[date] ?: emptyList(),
@@ -417,9 +433,13 @@ private fun MonthSection(
     monthStart: LocalDate,
     selectedDate: LocalDate,
     intakesByDate: Map<LocalDate, List<MedicationIntake>>,
+    firstDayOfWeek: DayOfWeek,
     onDayClick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val weekLetters = weekLettersFor(firstDayOfWeek)
+    val lastDayOfWeek = firstDayOfWeek.minus(1)
+
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             text = "VISTA MENSUAL",
@@ -428,7 +448,7 @@ private fun MonthSection(
         )
 
         Row(modifier = Modifier.fillMaxWidth()) {
-            WEEK_LETTERS.forEach { letter ->
+            weekLetters.forEach { letter ->
                 Text(
                     text = letter,
                     modifier = Modifier.weight(1f),
@@ -440,9 +460,9 @@ private fun MonthSection(
             }
         }
 
-        val gridStart = monthStart.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val gridStart = monthStart.with(TemporalAdjusters.previousOrSame(firstDayOfWeek))
         val monthEnd = monthStart.withDayOfMonth(monthStart.lengthOfMonth())
-        val gridEnd = monthEnd.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
+        val gridEnd = monthEnd.with(TemporalAdjusters.nextOrSame(lastDayOfWeek))
 
         var current = gridStart
         while (!current.isAfter(gridEnd)) {

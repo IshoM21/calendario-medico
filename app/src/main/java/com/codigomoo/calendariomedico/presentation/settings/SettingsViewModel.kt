@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import java.time.DayOfWeek
 import java.time.LocalTime
 import javax.inject.Inject
 
@@ -19,6 +20,7 @@ data class SettingsUiState(
     val pendingAlertDelayMinutes: Int = 30,
     val notificationsEnabled: Boolean = true,
     val patientName: String = "",
+    val firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
     val isLoading: Boolean = true
 )
 
@@ -40,8 +42,8 @@ class SettingsViewModel @Inject constructor(
     ) { d, e -> Pair(d, e) }
 
     val uiState: StateFlow<SettingsUiState> = combine(
-        timesFlow, alertFlow, preferences.patientName
-    ) { times, alert, name ->
+        timesFlow, alertFlow, preferences.patientName, preferences.firstDayOfWeek
+    ) { times, alert, name, firstDay ->
         SettingsUiState(
             morningTime = times.first,
             noonTime = times.second,
@@ -49,6 +51,7 @@ class SettingsViewModel @Inject constructor(
             pendingAlertDelayMinutes = alert.first,
             notificationsEnabled = alert.second,
             patientName = name,
+            firstDayOfWeek = firstDay,
             isLoading = false
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
@@ -59,7 +62,8 @@ class SettingsViewModel @Inject constructor(
         nightTime: LocalTime,
         notificationsEnabled: Boolean,
         delayMinutes: Int,
-        patientName: String
+        patientName: String,
+        firstDayOfWeek: DayOfWeek
     ) {
         preferences.setMorningTime(morningTime)
         preferences.setNoonTime(noonTime)
@@ -67,6 +71,7 @@ class SettingsViewModel @Inject constructor(
         preferences.setNotificationsEnabled(notificationsEnabled)
         preferences.setPendingAlertDelayMinutes(delayMinutes)
         preferences.setPatientName(patientName)
+        preferences.setFirstDayOfWeek(firstDayOfWeek)
         rescheduleRemindersUseCase()
     }
 }
