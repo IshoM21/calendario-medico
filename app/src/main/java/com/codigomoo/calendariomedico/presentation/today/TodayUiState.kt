@@ -5,8 +5,19 @@ import com.codigomoo.calendariomedico.domain.model.MedicationIntake
 import com.codigomoo.calendariomedico.domain.model.TimeSlot
 import java.time.LocalDate
 
+data class AsNeededItem(
+    val medicationId: Long,
+    val treatmentId: Long,
+    val medicationName: String,
+    val dose: String,
+    val takenToday: List<MedicationIntake> = emptyList()
+)
+
 data class AsNeededDialogState(
-    val intake: MedicationIntake,
+    val medicationId: Long,
+    val treatmentId: Long,
+    val medicationName: String,
+    val dose: String,
     val notes: String = "",
     val intervalWarning: String? = null
 )
@@ -17,7 +28,7 @@ data class TodayUiState(
     val treatmentName: String = "",
     val treatmentEndDate: LocalDate? = null,
     val intakesBySlot: Map<TimeSlot, List<MedicationIntake>> = emptyMap(),
-    val asNeededIntakes: List<MedicationIntake> = emptyList(),
+    val asNeededItems: List<AsNeededItem> = emptyList(),
     val asNeededExpanded: Boolean = true,
     val asNeededDialog: AsNeededDialogState? = null,
     val totalRequired: Int = 0,

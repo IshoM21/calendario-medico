@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.LocalTime
 import javax.inject.Inject
 
@@ -54,27 +53,20 @@ class SettingsViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
-    fun setMorningTime(time: LocalTime) {
-        viewModelScope.launch { preferences.setMorningTime(time); rescheduleRemindersUseCase() }
-    }
-
-    fun setNoonTime(time: LocalTime) {
-        viewModelScope.launch { preferences.setNoonTime(time); rescheduleRemindersUseCase() }
-    }
-
-    fun setNightTime(time: LocalTime) {
-        viewModelScope.launch { preferences.setNightTime(time); rescheduleRemindersUseCase() }
-    }
-
-    fun setPendingAlertDelayMinutes(minutes: Int) {
-        viewModelScope.launch { preferences.setPendingAlertDelayMinutes(minutes) }
-    }
-
-    fun setNotificationsEnabled(enabled: Boolean) {
-        viewModelScope.launch { preferences.setNotificationsEnabled(enabled); rescheduleRemindersUseCase() }
-    }
-
-    fun setPatientName(name: String) {
-        viewModelScope.launch { preferences.setPatientName(name) }
+    suspend fun saveAll(
+        morningTime: LocalTime,
+        noonTime: LocalTime,
+        nightTime: LocalTime,
+        notificationsEnabled: Boolean,
+        delayMinutes: Int,
+        patientName: String
+    ) {
+        preferences.setMorningTime(morningTime)
+        preferences.setNoonTime(noonTime)
+        preferences.setNightTime(nightTime)
+        preferences.setNotificationsEnabled(notificationsEnabled)
+        preferences.setPendingAlertDelayMinutes(delayMinutes)
+        preferences.setPatientName(patientName)
+        rescheduleRemindersUseCase()
     }
 }

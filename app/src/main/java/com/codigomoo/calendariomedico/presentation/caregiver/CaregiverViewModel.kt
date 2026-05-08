@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
-enum class PinMode { SET, CONFIRM, ENTER }
+enum class PinMode { SET, CONFIRM, ENTER, CHANGE_VERIFY }
 
 data class PinUiState(
     val mode: PinMode = PinMode.ENTER,
@@ -34,7 +34,11 @@ class CaregiverViewModel @Inject constructor(
     fun init(inputMode: String) {
         buffer = ""
         firstPin = ""
-        val mode = if (inputMode == "setup" || !pinManager.hasPin()) PinMode.SET else PinMode.ENTER
+        val mode = when {
+            inputMode == "change" && pinManager.hasPin() -> PinMode.CHANGE_VERIFY
+            inputMode == "setup" || inputMode == "set" || !pinManager.hasPin() -> PinMode.SET
+            else -> PinMode.ENTER
+        }
         applyMode(mode)
     }
 
@@ -57,6 +61,15 @@ class CaregiverViewModel @Inject constructor(
 
     private fun processPin() {
         when (_state.value.mode) {
+            PinMode.CHANGE_VERIFY -> {
+                if (pinManager.verifyPin(buffer)) {
+                    buffer = ""
+                    applyMode(PinMode.SET)
+                } else {
+                    buffer = ""
+                    _state.update { it.copy(dotCount = 0, error = "PIN incorrecto") }
+                }
+            }
             PinMode.SET -> {
                 firstPin = buffer
                 buffer = ""
@@ -89,6 +102,7 @@ class CaregiverViewModel @Inject constructor(
 
     private fun applyMode(mode: PinMode) {
         val (title, subtitle) = when (mode) {
+            PinMode.CHANGE_VERIFY -> "Cambiar PIN" to "Ingresa tu PIN actual"
             PinMode.SET -> "Crear PIN" to "Ingresa un PIN de 4 dígitos"
             PinMode.CONFIRM -> "Confirmar PIN" to "Repite el PIN para confirmar"
             PinMode.ENTER -> "Modo Cuidador" to "Ingresa tu PIN para continuar"

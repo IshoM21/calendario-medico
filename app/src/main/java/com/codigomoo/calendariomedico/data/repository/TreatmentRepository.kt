@@ -22,11 +22,12 @@ class TreatmentRepository @Inject constructor(
 
     suspend fun save(treatment: Treatment): Long {
         val now = LocalDateTime.now()
-        val entity = TreatmentEntity.fromDomain(
-            if (treatment.id == 0L) treatment.copy(createdAt = now, updatedAt = now)
-            else treatment.copy(updatedAt = now)
-        )
-        return dao.insert(entity)
+        return if (treatment.id == 0L) {
+            dao.insert(TreatmentEntity.fromDomain(treatment.copy(createdAt = now, updatedAt = now)))
+        } else {
+            dao.update(TreatmentEntity.fromDomain(treatment.copy(updatedAt = now)))
+            treatment.id
+        }
     }
 
     suspend fun activate(id: Long) {

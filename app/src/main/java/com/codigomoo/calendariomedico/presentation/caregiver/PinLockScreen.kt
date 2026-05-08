@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
@@ -30,7 +31,7 @@ import androidx.navigation.NavController
 import com.codigomoo.calendariomedico.presentation.navigation.Route
 
 @Composable
-fun PinLockScreen(mode: String, navController: NavController) {
+fun PinLockScreen(mode: String, destination: String? = null, navController: NavController) {
     val viewModel: CaregiverViewModel = hiltViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -38,8 +39,14 @@ fun PinLockScreen(mode: String, navController: NavController) {
 
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
-            navController.navigate(Route.CaregiverHub) {
-                popUpTo(Route.PinLock(mode)) { inclusive = true }
+            when (destination) {
+                "treatment_form" -> navController.navigate(Route.TreatmentForm()) {
+                    popUpTo(Route.PinLock(mode, destination)) { inclusive = true }
+                }
+                "back" -> navController.popBackStack()
+                else -> navController.navigate(Route.CaregiverHub) {
+                    popUpTo(Route.PinLock(mode, destination)) { inclusive = true }
+                }
             }
         }
     }
@@ -47,7 +54,8 @@ fun PinLockScreen(mode: String, navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background)
+            .systemBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceEvenly
     ) {

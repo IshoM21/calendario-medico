@@ -6,6 +6,7 @@ import com.codigomoo.calendariomedico.data.repository.TreatmentRepository
 import com.codigomoo.calendariomedico.domain.model.IntakeStatus
 import com.codigomoo.calendariomedico.domain.model.MedicationIntake
 import com.codigomoo.calendariomedico.domain.model.TimeSlot
+
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import javax.inject.Inject
@@ -32,7 +33,11 @@ class GenerateDailyIntakesUseCase @Inject constructor(
 
             val doseOverride = schedules.find { it.dayOfWeek == date.dayOfWeek }?.doseOverride
             val dose = doseOverride ?: medication.dose
-            val status = if (medication.isRequired) IntakeStatus.PENDING else IntakeStatus.OPTIONAL
+            val status = when {
+                !medication.isRequired -> IntakeStatus.OPTIONAL
+                date < LocalDate.now() -> IntakeStatus.MISSED
+                else -> IntakeStatus.PENDING
+            }
 
             toInsert += MedicationIntake(
                 treatmentId = treatment.id,

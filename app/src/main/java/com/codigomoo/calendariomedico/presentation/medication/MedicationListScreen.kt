@@ -18,6 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,13 +65,23 @@ fun MedicationListScreen(
     medicationToDelete?.let { med ->
         AlertDialog(
             onDismissRequest = { medicationToDelete = null },
-            title = { Text("Eliminar medicamento") },
-            text = { Text("¿Eliminar \"${med.name}\"? Se borrarán todas sus tomas, incluido el historial pasado.") },
+            title = { Text("¿Eliminar \"${med.name}\"?") },
+            text = {
+                Text(
+                    "Esta acción no se puede deshacer. Se eliminarán todas las tomas programadas y el historial pasado de este medicamento."
+                )
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.delete(med)
-                    medicationToDelete = null
-                }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+                Button(
+                    onClick = {
+                        viewModel.delete(med)
+                        medicationToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) { Text("Eliminar definitivamente") }
             },
             dismissButton = {
                 TextButton(onClick = { medicationToDelete = null }) { Text("Cancelar") }

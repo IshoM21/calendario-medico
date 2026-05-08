@@ -39,4 +39,10 @@ interface IntakeDao {
 
     @Query("DELETE FROM medication_intakes WHERE treatmentId = :treatmentId AND date >= :fromDate AND (status = 'PENDING' OR status = 'OPTIONAL')")
     suspend fun deleteFuturePending(treatmentId: Long, fromDate: LocalDate)
+
+    @Query("DELETE FROM medication_intakes WHERE medicationId = :medicationId AND date >= :fromDate AND (status = 'PENDING' OR status = 'OPTIONAL')")
+    suspend fun deleteFuturePendingByMedication(medicationId: Long, fromDate: LocalDate)
+
+    @Query("UPDATE medication_intakes SET status = 'MISSED' WHERE date < :date AND status = 'PENDING'")
+    suspend fun markPendingBeforeDateAsMissed(date: LocalDate)
 }

@@ -1,5 +1,14 @@
 package com.codigomoo.calendariomedico.presentation.today
 
+import android.Manifest
+import android.app.AlarmManager
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,10 +49,18 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +88,35 @@ fun TodayScreen(
     viewModel: TodayViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var permissionsRefreshKey by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) permissionsRefreshKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val alarmManager = context.getSystemService(AlarmManager::class.java)
+    val needsAlarmPermission = (permissionsRefreshKey >= 0) &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+        !alarmManager.canScheduleExactAlarms()
+
+    val needsNotifPermission = (permissionsRefreshKey >= 0) &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+
+    var notifPermissionRequested by rememberSaveable { mutableStateOf(false) }
+    val notifPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { notifPermissionRequested = true }
+
+    val notifPermanentlyDenied = needsNotifPermission && notifPermissionRequested &&
+        (context as? android.app.Activity)
+            ?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) == false
+
     var intakeIdToSkip by remember { mutableStateOf<Long?>(null) }
 
     intakeIdToSkip?.let { intakeId ->
@@ -153,12 +199,45 @@ fun TodayScreen(
                     Spacer(Modifier.height(8.dp))
                 }
 
+                if (needsNotifPermission) {
+                    item(key = "notif_banner") {
+                        NotificationsPermissionBanner(
+                            permanentlyDenied = notifPermanentlyDenied,
+                            onActivate = {
+                                if (notifPermanentlyDenied) {
+                                    context.startActivity(
+                                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = Uri.fromParts("package", context.packageName, null)
+                                        }
+                                    )
+                                } else {
+                                    notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                            }
+                        )
+                    }
+                }
+
+                if (needsAlarmPermission) {
+                    item(key = "alarm_banner") {
+                        AlarmPermissionBanner(
+                            onFix = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    context.startActivity(
+                                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+
                 if (uiState.isTreatmentExpired) {
                     item(key = "expired_banner") {
                         ExpiredTreatmentBanner(
                             endDate = uiState.treatmentEndDate!!.toDisplayString(),
                             onCreateNew = {
-                                navController.navigate(Route.PinLock("enter"))
+                                navController.navigate(Route.PinLock("enter", "treatment_form"))
                             }
                         )
                     }
@@ -181,19 +260,19 @@ fun TodayScreen(
                         }
                     }
 
-                    if (uiState.asNeededIntakes.isNotEmpty()) {
+                    if (uiState.asNeededItems.isNotEmpty()) {
                         item(key = "as_needed_header") {
                             AsNeededSectionHeader(
-                                count = uiState.asNeededIntakes.size,
+                                count = uiState.asNeededItems.size,
                                 expanded = uiState.asNeededExpanded,
                                 onToggle = { viewModel.toggleAsNeededExpanded() }
                             )
                         }
                         if (uiState.asNeededExpanded) {
-                            items(uiState.asNeededIntakes, key = { "as_needed_${it.id}" }) { intake ->
+                            items(uiState.asNeededItems, key = { "as_needed_${it.medicationId}" }) { item ->
                                 AsNeededCard(
-                                    intake = intake,
-                                    onRegister = { viewModel.startAsNeededRegistration(intake) }
+                                    item = item,
+                                    onRegister = { viewModel.startAsNeededRegistration(item) }
                                 )
                             }
                         }
@@ -465,7 +544,7 @@ private fun AsNeededSectionHeader(count: Int, expanded: Boolean, onToggle: () ->
 }
 
 @Composable
-private fun AsNeededCard(intake: MedicationIntake, onRegister: () -> Unit) {
+private fun AsNeededCard(item: AsNeededItem, onRegister: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -484,12 +563,12 @@ private fun AsNeededCard(intake: MedicationIntake, onRegister: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = intake.medicationName,
+                    text = item.medicationName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
-                if (intake.status == IntakeStatus.TAKEN) {
+                if (item.takenToday.isNotEmpty()) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -500,34 +579,33 @@ private fun AsNeededCard(intake: MedicationIntake, onRegister: () -> Unit) {
                             tint = Color(0xFF2E7D32),
                             modifier = Modifier.size(18.dp)
                         )
-                        intake.confirmedAt?.let {
-                            Text(
-                                text = it.toLocalTime().toDisplayString(),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF2E7D32)
-                            )
-                        }
+                        Text(
+                            text = if (item.takenToday.size == 1)
+                                item.takenToday[0].confirmedAt?.toLocalTime()?.toDisplayString() ?: "1 vez"
+                            else
+                                "${item.takenToday.size} veces hoy",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF2E7D32)
+                        )
                     }
                 }
             }
 
             Text(
-                text = intake.dose,
+                text = item.dose,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
 
-            if (intake.status == IntakeStatus.OPTIONAL) {
-                Spacer(Modifier.height(4.dp))
-                OutlinedButton(
-                    onClick = onRegister,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.secondary
-                    )
-                ) {
-                    Text("Registrar toma")
-                }
+            Spacer(Modifier.height(4.dp))
+            OutlinedButton(
+                onClick = onRegister,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Text("Registrar toma")
             }
         }
     }
@@ -542,7 +620,7 @@ private fun AsNeededRegistrationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(dialog.intake.medicationName) },
+        title = { Text(dialog.medicationName) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 dialog.intervalWarning?.let { warning ->
@@ -712,4 +790,60 @@ private fun TimeSlot.accentColor(): Color = when (this) {
     TimeSlot.NOON -> Color(0xFFE67E22)
     TimeSlot.NIGHT -> Color(0xFF5C6BC0)
     TimeSlot.AS_NEEDED -> MaterialTheme.colorScheme.secondary
+}
+
+@Composable
+private fun NotificationsPermissionBanner(permanentlyDenied: Boolean, onActivate: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (permanentlyDenied)
+                    "Notificaciones bloqueadas. Actívalas desde Ajustes del sistema para recibir recordatorios."
+                else
+                    "Activa las notificaciones para recibir recordatorios de tus medicamentos.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onActivate) {
+                Text(
+                    text = if (permanentlyDenied) "Ajustes" else "Activar",
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlarmPermissionBanner(onFix: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Las alarmas exactas no están activas. Las notificaciones pueden llegar tarde.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onFix) {
+                Text("Activar", color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
 }

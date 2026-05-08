@@ -10,6 +10,7 @@ import com.codigomoo.calendariomedico.data.preferences.ReminderPreferences
 import com.codigomoo.calendariomedico.data.repository.IntakeRepository
 import com.codigomoo.calendariomedico.domain.model.IntakeStatus
 import com.codigomoo.calendariomedico.domain.model.TimeSlot
+import com.codigomoo.calendariomedico.domain.usecase.GenerateDailyIntakesUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +24,7 @@ import javax.inject.Inject
 class ReminderAlarmReceiver : BroadcastReceiver() {
 
     @Inject lateinit var intakeRepository: IntakeRepository
+    @Inject lateinit var generateDailyIntakesUseCase: GenerateDailyIntakesUseCase
     @Inject lateinit var notificationHelper: NotificationHelper
     @Inject lateinit var alarmScheduler: AlarmScheduler
     @Inject lateinit var preferences: ReminderPreferences
@@ -35,6 +37,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val today = LocalDate.now()
+                generateDailyIntakesUseCase(today)
                 val intakes = intakeRepository.getByDateOnce(today)
                     .filter { it.scheduledTimeSlot == timeSlot && it.status == IntakeStatus.PENDING }
 

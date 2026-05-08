@@ -51,4 +51,10 @@ class IntakeRepository @Inject constructor(
 
     suspend fun deleteFuturePending(treatmentId: Long, fromDate: LocalDate) =
         dao.deleteFuturePending(treatmentId, fromDate)
+
+    suspend fun deleteFuturePendingByMedication(medicationId: Long, fromDate: LocalDate) =
+        dao.deleteFuturePendingByMedication(medicationId, fromDate)
+
+    suspend fun markPendingBeforeDateAsMissed(date: LocalDate) =
+        dao.markPendingBeforeDateAsMissed(date)
 }

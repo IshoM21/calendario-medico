@@ -2,10 +2,13 @@ package com.codigomoo.calendariomedico.presentation.medication
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.codigomoo.calendariomedico.data.repository.IntakeRepository
 import com.codigomoo.calendariomedico.data.repository.MedicationRepository
 import com.codigomoo.calendariomedico.domain.model.Medication
 import com.codigomoo.calendariomedico.domain.model.MedicationSchedule
 import com.codigomoo.calendariomedico.domain.model.TimeSlot
+import com.codigomoo.calendariomedico.domain.usecase.GenerateDailyIntakesUseCase
+import com.codigomoo.calendariomedico.domain.usecase.RescheduleRemindersUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
 
@@ -26,6 +30,7 @@ data class MedicationFormState(
     val doseOverrides: Map<DayOfWeek, String> = emptyMap(),
     val isRequired: Boolean = true,
     val colorHex: String? = null,
+    val minIntervalHours: Int? = null,
     val nameError: String? = null,
     val doseError: String? = null,
     val isSaving: Boolean = false,
@@ -34,7 +39,10 @@ data class MedicationFormState(
 
 @HiltViewModel
 class MedicationViewModel @Inject constructor(
-    private val medicationRepository: MedicationRepository
+    private val medicationRepository: MedicationRepository,
+    private val intakeRepository: IntakeRepository,
+    private val rescheduleRemindersUseCase: RescheduleRemindersUseCase,
+    private val generateDailyIntakesUseCase: GenerateDailyIntakesUseCase
 ) : ViewModel() {
 
     private val _medications = MutableStateFlow<List<Medication>>(emptyList())
@@ -77,6 +85,7 @@ class MedicationViewModel @Inject constructor(
                     doseOverrides = overrides,
                     isRequired = med.isRequired,
                     colorHex = med.colorHex,
+                    minIntervalHours = med.minIntervalHours,
                     isSaved = false
                 )
             }
@@ -123,6 +132,7 @@ class MedicationViewModel @Inject constructor(
                 timeSlot = s.timeSlot,
                 isRequired = s.isRequired,
                 colorHex = s.colorHex,
+                minIntervalHours = s.minIntervalHours,
                 createdAt = now,
                 updatedAt = now
             )
@@ -138,6 +148,14 @@ class MedicationViewModel @Inject constructor(
                 )
             }
             medicationRepository.replaceSchedules(savedId, schedules)
+
+            val today = LocalDate.now()
+            if (medicationId != null) {
+                intakeRepository.deleteFuturePendingByMedication(savedId, today)
+            }
+            generateDailyIntakesUseCase(today)
+            rescheduleRemindersUseCase()
+
             _form.update { it.copy(isSaving = false, isSaved = true) }
         }
     }

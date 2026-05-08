@@ -1,9 +1,13 @@
 package com.codigomoo.calendariomedico.presentation.settings
 
+import android.Manifest
 import android.app.AlarmManager
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,15 +27,19 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,18 +47,24 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -65,20 +80,59 @@ fun SettingsScreen(navController: NavController) {
     val viewModel: SettingsViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var permissionsRefreshKey by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) permissionsRefreshKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val alarmManager = context.getSystemService(AlarmManager::class.java)
-    val needsExactAlarmPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+    val needsExactAlarmPermission = (permissionsRefreshKey >= 0) &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
         !alarmManager.canScheduleExactAlarms()
+    val needsNotifPermission = (permissionsRefreshKey >= 0) &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+
+    // Draft state — inicializado una sola vez cuando termina de cargar
+    var morningTimeDraft  by remember { mutableStateOf(LocalTime.of(8, 0)) }
+    var noonTimeDraft     by remember { mutableStateOf(LocalTime.of(13, 0)) }
+    var nightTimeDraft    by remember { mutableStateOf(LocalTime.of(21, 0)) }
+    var notifEnabledDraft by remember { mutableStateOf(true) }
+    var minutesDraft      by remember { mutableStateOf("30") }
+    var patientNameDraft  by remember { mutableStateOf("") }
+
+    LaunchedEffect(uiState.isLoading) {
+        if (!uiState.isLoading) {
+            morningTimeDraft  = uiState.morningTime
+            noonTimeDraft     = uiState.noonTime
+            nightTimeDraft    = uiState.nightTime
+            notifEnabledDraft = uiState.notificationsEnabled
+            minutesDraft      = uiState.pendingAlertDelayMinutes.toString()
+            patientNameDraft  = uiState.patientName
+        }
+    }
+
+    val hasUnsavedChanges = !uiState.isLoading && (
+        morningTimeDraft  != uiState.morningTime ||
+        noonTimeDraft     != uiState.noonTime ||
+        nightTimeDraft    != uiState.nightTime ||
+        notifEnabledDraft != uiState.notificationsEnabled ||
+        (minutesDraft.toIntOrNull() ?: -1) != uiState.pendingAlertDelayMinutes ||
+        patientNameDraft.trim() != uiState.patientName
+    )
+
+    var isSaving by remember { mutableStateOf(false) }
 
     var showMorningPicker by remember { mutableStateOf(false) }
-    var showNoonPicker by remember { mutableStateOf(false) }
-    var showNightPicker by remember { mutableStateOf(false) }
-
-    var patientNameDraft by remember { mutableStateOf("") }
-    var minutesDraft by remember { mutableStateOf("") }
-
-    LaunchedEffect(uiState.patientName) { patientNameDraft = uiState.patientName }
-    LaunchedEffect(uiState.pendingAlertDelayMinutes) { minutesDraft = uiState.pendingAlertDelayMinutes.toString() }
+    var showNoonPicker    by remember { mutableStateOf(false) }
+    var showNightPicker   by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -90,6 +144,56 @@ fun SettingsScreen(navController: NavController) {
                     }
                 }
             )
+        },
+        bottomBar = {
+            Surface(shadowElevation = 8.dp) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { navController.popBackStack() },
+                        enabled = !isSaving,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Cancelar")
+                    }
+                    Button(
+                        onClick = {
+                            if (!isSaving) {
+                                focusManager.clearFocus()
+                                val mins = minutesDraft.toIntOrNull()?.coerceIn(1, 120) ?: 30
+                                isSaving = true
+                                scope.launch {
+                                    try {
+                                        viewModel.saveAll(
+                                            morningTime = morningTimeDraft,
+                                            noonTime = noonTimeDraft,
+                                            nightTime = nightTimeDraft,
+                                            notificationsEnabled = notifEnabledDraft,
+                                            delayMinutes = mins,
+                                            patientName = patientNameDraft.trim()
+                                        )
+                                        navController.popBackStack()
+                                    } finally {
+                                        isSaving = false
+                                    }
+                                }
+                            }
+                        },
+                        enabled = hasUnsavedChanges && !isSaving,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text(if (isSaving) "Guardando..." else "Guardar cambios")
+                    }
+                }
+            }
         }
     ) { padding ->
         LazyColumn(
@@ -103,11 +207,11 @@ fun SettingsScreen(navController: NavController) {
             item { SectionLabel("Horarios de aviso") }
             item {
                 SettingsCard {
-                    TimeRow("Mañana", uiState.morningTime) { showMorningPicker = true }
+                    TimeRow("Mañana", morningTimeDraft) { showMorningPicker = true }
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-                    TimeRow("Comida", uiState.noonTime) { showNoonPicker = true }
+                    TimeRow("Comida", noonTimeDraft) { showNoonPicker = true }
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-                    TimeRow("Noche", uiState.nightTime) { showNightPicker = true }
+                    TimeRow("Noche", nightTimeDraft) { showNightPicker = true }
                 }
             }
 
@@ -116,20 +220,15 @@ fun SettingsScreen(navController: NavController) {
                 SettingsCard {
                     SwitchRow(
                         label = "Activar notificaciones",
-                        checked = uiState.notificationsEnabled,
-                        onCheckedChange = { viewModel.setNotificationsEnabled(it) }
+                        checked = notifEnabledDraft,
+                        onCheckedChange = { notifEnabledDraft = it }
                     )
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
                     MinutesRow(
                         label = "Alerta de pendientes",
                         value = minutesDraft,
                         onChange = { minutesDraft = it },
-                        onDone = {
-                            val mins = minutesDraft.toIntOrNull()?.coerceIn(1, 120) ?: 30
-                            minutesDraft = mins.toString()
-                            viewModel.setPendingAlertDelayMinutes(mins)
-                            focusManager.clearFocus()
-                        }
+                        onDone = { focusManager.clearFocus() }
                     )
                 }
             }
@@ -145,56 +244,96 @@ fun SettingsScreen(navController: NavController) {
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = {
-                                viewModel.setPatientName(patientNameDraft.trim())
-                                focusManager.clearFocus()
-                            })
+                            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                         )
                     }
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
                     ClickableRow(label = "Cambiar PIN") {
-                        navController.navigate(Route.PinLock("set"))
+                        navController.navigate(Route.PinLock("change", "back"))
                     }
                 }
             }
 
-            if (needsExactAlarmPermission) {
+            if (needsNotifPermission || needsExactAlarmPermission) {
                 item { SectionLabel("Permisos") }
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer
-                        ),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                if (needsNotifPermission) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            ),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text(
-                                text = "Alarmas exactas no disponibles",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            Text(
-                                text = "Sin este permiso las notificaciones pueden llegar con retraso. Actívalo en Ajustes del sistema.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            TextButton(
-                                onClick = {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                        context.startActivity(
-                                            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                                        )
-                                    }
-                                }
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    "Abrir ajustes del sistema",
-                                    color = MaterialTheme.colorScheme.error
+                                    text = "Notificaciones desactivadas",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
+                                Text(
+                                    text = "El paciente no recibirá recordatorios de medicamentos. Actívalas en Ajustes del sistema.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                TextButton(
+                                    onClick = {
+                                        context.startActivity(
+                                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                data = Uri.fromParts("package", context.packageName, null)
+                                            }
+                                        )
+                                    }
+                                ) {
+                                    Text(
+                                        "Abrir ajustes del sistema",
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                if (needsExactAlarmPermission) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "Alarmas exactas no disponibles",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Text(
+                                    text = "Sin este permiso las notificaciones pueden llegar con retraso. Actívalo en Ajustes del sistema.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                TextButton(
+                                    onClick = {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            context.startActivity(
+                                                Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                            )
+                                        }
+                                    }
+                                ) {
+                                    Text(
+                                        "Abrir ajustes del sistema",
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             }
                         }
                     }
@@ -226,24 +365,24 @@ fun SettingsScreen(navController: NavController) {
     if (showMorningPicker) {
         TimePickerDialog(
             title = "Horario de mañana",
-            initialTime = uiState.morningTime,
-            onConfirm = { viewModel.setMorningTime(it) },
+            initialTime = morningTimeDraft,
+            onConfirm = { morningTimeDraft = it; showMorningPicker = false },
             onDismiss = { showMorningPicker = false }
         )
     }
     if (showNoonPicker) {
         TimePickerDialog(
             title = "Horario de comida",
-            initialTime = uiState.noonTime,
-            onConfirm = { viewModel.setNoonTime(it) },
+            initialTime = noonTimeDraft,
+            onConfirm = { noonTimeDraft = it; showNoonPicker = false },
             onDismiss = { showNoonPicker = false }
         )
     }
     if (showNightPicker) {
         TimePickerDialog(
             title = "Horario de noche",
-            initialTime = uiState.nightTime,
-            onConfirm = { viewModel.setNightTime(it) },
+            initialTime = nightTimeDraft,
+            onConfirm = { nightTimeDraft = it; showNightPicker = false },
             onDismiss = { showNightPicker = false }
         )
     }
@@ -390,7 +529,6 @@ private fun TimePickerDialog(
                     Spacer(Modifier.width(8.dp))
                     TextButton(onClick = {
                         onConfirm(LocalTime.of(state.hour, state.minute))
-                        onDismiss()
                     }) { Text("Aceptar") }
                 }
             }

@@ -45,7 +45,7 @@ sealed interface Route {
     @Serializable data class MedicationList(val treatmentId: Long) : Route
     @Serializable data class MedicationForm(val treatmentId: Long, val medicationId: Long? = null) : Route
     @Serializable data class MedicationDetail(val medicationId: Long) : Route
-    @Serializable data class PinLock(val mode: String) : Route
+    @Serializable data class PinLock(val mode: String, val destination: String? = null) : Route
     @Serializable data object CaregiverHub : Route
     @Serializable data object Settings : Route
 }
@@ -109,7 +109,7 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
             }
             composable<Route.PinLock> { backStackEntry ->
                 val route = backStackEntry.toRoute<Route.PinLock>()
-                PinLockScreen(mode = route.mode, navController = navController)
+                PinLockScreen(mode = route.mode, destination = route.destination, navController = navController)
             }
             composable<Route.CaregiverHub> {
                 CaregiverHubScreen(navController = navController)
