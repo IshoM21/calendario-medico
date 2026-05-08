@@ -15,18 +15,21 @@ import com.codigomoo.calendariomedico.domain.usecase.GetTodayIntakesUseCase
 import com.codigomoo.calendariomedico.domain.usecase.MarkIntakeAsTakenUseCase
 import com.codigomoo.calendariomedico.domain.usecase.SkipIntakeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @HiltViewModel
@@ -43,6 +46,15 @@ class TodayViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TodayUiState())
     val uiState: StateFlow<TodayUiState> = _uiState.asStateFlow()
 
+    private val tickerFlow = flow {
+        while (true) {
+            emit(LocalTime.now())
+            delay(60_000L)
+        }
+    }
+
+    private data class SlotTimesState(val times: SlotTimes, val currentTime: LocalTime)
+
     init {
         viewModelScope.launch { intakeRepository.markPendingBeforeDateAsMissed(LocalDate.now()) }
         loadIntakes()
@@ -51,20 +63,34 @@ class TodayViewModel @Inject constructor(
     private fun loadIntakes() {
         viewModelScope.launch {
             try {
+                val slotTimesFlow = combine(
+                    reminderPreferences.morningTime,
+                    reminderPreferences.noonTime,
+                    reminderPreferences.nightTime,
+                    tickerFlow
+                ) { morning, noon, night, currentTime ->
+                    SlotTimesState(SlotTimes(morning, noon, night), currentTime)
+                }
+
                 treatmentRepository.getActive()
                     .flatMapLatest { treatment ->
                         if (treatment == null) {
-                            reminderPreferences.hasCompletedOnboarding.map { onboarded ->
-                                buildUiState(null, emptyMap(), emptyList(), onboarded)
+                            combine(
+                                reminderPreferences.hasCompletedOnboarding,
+                                reminderPreferences.patientName,
+                                slotTimesFlow
+                            ) { onboarded, name, slotTimesState ->
+                                buildUiState(null, emptyMap(), emptyList(), onboarded, name, slotTimesState)
                             }
                         } else {
                             combine(
                                 getTodayIntakesUseCase(),
                                 medicationRepository.getByTreatment(treatment.id),
-                                reminderPreferences.hasCompletedOnboarding
-                            ) { intakesBySlot, allMeds, onboarded ->
-                                val asNeededMeds = allMeds.filter { it.timeSlot == TimeSlot.AS_NEEDED }
-                                buildUiState(treatment, intakesBySlot, asNeededMeds, onboarded)
+                                reminderPreferences.hasCompletedOnboarding,
+                                reminderPreferences.patientName,
+                                slotTimesFlow
+                            ) { intakesBySlot, allMeds, onboarded, patientName, slotTimesState ->
+                                buildUiState(treatment, intakesBySlot, allMeds, onboarded, patientName, slotTimesState)
                             }
                         }
                     }
@@ -75,7 +101,10 @@ class TodayViewModel @Inject constructor(
                         _uiState.update { current ->
                             newState.copy(
                                 asNeededExpanded = current.asNeededExpanded,
-                                asNeededDialog = current.asNeededDialog
+                                asNeededDialog = current.asNeededDialog,
+                                expandedSlots = current.expandedSlots,
+                                markTakenDialog = current.markTakenDialog,
+                                navigateToConfirmation = current.navigateToConfirmation
                             )
                         }
                     }
@@ -86,7 +115,35 @@ class TodayViewModel @Inject constructor(
     }
 
     fun markAsTaken(intakeId: Long) {
+        val state = _uiState.value
+        val fmt = DateTimeFormatter.ofPattern("H:mm")
+        val item = state.orderedSlots.flatMap { it.second }.find { it.intake.id == intakeId }
+        val confirmData = if (item != null) {
+            val next = findNextPendingAfter(intakeId, state)
+            TakenConfirmData(
+                label = "${item.intake.medicationName} ${item.intake.dose}",
+                confirmedAtTime = LocalTime.now().format(fmt),
+                nextMedicationName = next?.first ?: "",
+                nextSlotTime = next?.second ?: ""
+            )
+        } else null
+        _uiState.update { it.copy(markTakenDialog = null, navigateToConfirmation = confirmData) }
         viewModelScope.launch { markIntakeAsTakenUseCase(intakeId) }
+    }
+
+    fun confirmationNavigated() {
+        _uiState.update { it.copy(navigateToConfirmation = null) }
+    }
+
+    private fun findNextPendingAfter(excludeId: Long, state: TodayUiState): Pair<String, String>? {
+        val fmt = DateTimeFormatter.ofPattern("H:mm")
+        for ((slot, items) in state.orderedSlots) {
+            val item = items.firstOrNull {
+                it.intake.id != excludeId && it.intake.status == IntakeStatus.PENDING
+            } ?: continue
+            return item.intake.medicationName to state.slotTimes.timeOf(slot).format(fmt)
+        }
+        return null
     }
 
     fun skipIntake(intakeId: Long) {
@@ -95,6 +152,29 @@ class TodayViewModel @Inject constructor(
 
     fun completeOnboarding() {
         viewModelScope.launch { reminderPreferences.setHasCompletedOnboarding(true) }
+    }
+
+    fun toggleSlotExpanded(slot: TimeSlot) {
+        _uiState.update { current ->
+            val newExpanded = if (slot in current.expandedSlots)
+                current.expandedSlots - slot
+            else
+                current.expandedSlots + slot
+            current.copy(expandedSlots = newExpanded)
+        }
+    }
+
+    fun markNextAsTaken() {
+        val pending = _uiState.value.nextSlotPendingIntakes
+        when {
+            pending.isEmpty() -> return
+            pending.size == 1 -> markAsTaken(pending.first().id)
+            else -> _uiState.update { it.copy(markTakenDialog = pending) }
+        }
+    }
+
+    fun dismissMarkTakenDialog() {
+        _uiState.update { it.copy(markTakenDialog = null) }
     }
 
     fun startAsNeededRegistration(item: AsNeededItem) {
@@ -161,14 +241,47 @@ class TodayViewModel @Inject constructor(
     private fun buildUiState(
         treatment: Treatment?,
         intakesBySlot: Map<TimeSlot, List<MedicationIntake>>,
-        asNeededMeds: List<Medication>,
-        hasCompletedOnboarding: Boolean
+        allMeds: List<Medication>,
+        hasCompletedOnboarding: Boolean,
+        patientName: String,
+        slotTimesState: SlotTimesState
     ): TodayUiState {
+        val slotTimes = slotTimesState.times
+        val currentTime = slotTimesState.currentTime
+        val allMedsById = allMeds.associateBy { it.id }
+
         val regularSlots = intakesBySlot.filterKeys { it != TimeSlot.AS_NEEDED }
         val allRequired = regularSlots.values.flatten()
         val totalRequired = allRequired.count { it.status != IntakeStatus.OPTIONAL }
         val totalTaken = allRequired.count { it.status == IntakeStatus.TAKEN }
+
+        val orderedSlots = listOf(TimeSlot.MORNING, TimeSlot.NOON, TimeSlot.NIGHT)
+            .mapNotNull { slot ->
+                val intakes = regularSlots[slot]
+                if (!intakes.isNullOrEmpty()) {
+                    val items = intakes.map { intake ->
+                        val med = allMedsById[intake.medicationId]
+                        SlotMedItem(intake, med?.colorHex, med?.instructions)
+                    }
+                    slot to items
+                } else null
+            }
+            .sortedWith(compareBy({ slotPriority(it.first, slotTimesState) }, { it.first.ordinal }))
+
+        var nextIntakeInfo: NextIntakeInfo? = null
+        var nextSlotPendingIntakes: List<MedicationIntake> = emptyList()
+        for (slot in listOf(TimeSlot.MORNING, TimeSlot.NOON, TimeSlot.NIGHT).sortedBy { slotTimes.timeOf(it) }) {
+            val pending = intakesBySlot[slot]?.filter { it.status == IntakeStatus.PENDING } ?: continue
+            if (pending.isNotEmpty()) {
+                val first = pending.first()
+                nextIntakeInfo = NextIntakeInfo(first, allMedsById[first.medicationId]?.instructions)
+                nextSlotPendingIntakes = pending
+                break
+            }
+        }
+
         val asNeededTakenToday = intakesBySlot[TimeSlot.AS_NEEDED] ?: emptyList()
+        val asNeededMeds = allMeds.filter { it.timeSlot == TimeSlot.AS_NEEDED }
         val asNeededItems = if (treatment != null) {
             asNeededMeds.map { med ->
                 AsNeededItem(
@@ -180,17 +293,39 @@ class TodayViewModel @Inject constructor(
                 )
             }
         } else emptyList()
+
         return TodayUiState(
             isLoading = false,
             date = LocalDate.now(),
             treatmentName = treatment?.name ?: "",
             treatmentEndDate = treatment?.endDate,
-            intakesBySlot = regularSlots,
+            patientName = patientName,
+            slotTimes = slotTimes,
+            currentTime = currentTime,
+            orderedSlots = orderedSlots,
+            nextIntakeInfo = nextIntakeInfo,
+            nextSlotPendingIntakes = nextSlotPendingIntakes,
             asNeededItems = asNeededItems,
             totalRequired = totalRequired,
             totalTaken = totalTaken,
             hasActiveTreatment = treatment != null,
             isFirstLaunch = !hasCompletedOnboarding
         )
+    }
+
+    private fun slotPriority(slot: TimeSlot, state: SlotTimesState): Int {
+        val start: LocalTime
+        val end: LocalTime
+        when (slot) {
+            TimeSlot.MORNING -> { start = state.times.morning; end = state.times.noon.minusMinutes(1) }
+            TimeSlot.NOON -> { start = state.times.noon; end = state.times.night.minusMinutes(1) }
+            TimeSlot.NIGHT -> { start = state.times.night; end = LocalTime.of(23, 59) }
+            else -> return 1
+        }
+        return when {
+            !state.currentTime.isBefore(start) && !state.currentTime.isAfter(end) -> 0
+            state.currentTime.isBefore(start) -> 1
+            else -> 2
+        }
     }
 }

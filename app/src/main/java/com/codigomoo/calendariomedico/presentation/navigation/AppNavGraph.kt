@@ -1,26 +1,42 @@
 package com.codigomoo.calendariomedico.presentation.navigation
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavDeepLink
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
+import com.codigomoo.calendariomedico.core.notification.InAppReminderEvent
+import com.codigomoo.calendariomedico.domain.model.TimeSlot
 import com.codigomoo.calendariomedico.presentation.calendar.CalendarScreen
 import com.codigomoo.calendariomedico.presentation.caregiver.CaregiverHubScreen
 import com.codigomoo.calendariomedico.presentation.caregiver.PinLockScreen
@@ -30,10 +46,13 @@ import com.codigomoo.calendariomedico.presentation.medication.MedicationFormScre
 import com.codigomoo.calendariomedico.presentation.medication.MedicationListScreen
 import com.codigomoo.calendariomedico.presentation.profile.ProfileScreen
 import com.codigomoo.calendariomedico.presentation.settings.SettingsScreen
+import com.codigomoo.calendariomedico.presentation.today.ConfirmationScreen
 import com.codigomoo.calendariomedico.presentation.today.TodayScreen
 import com.codigomoo.calendariomedico.presentation.treatment.TreatmentFormScreen
 import com.codigomoo.calendariomedico.presentation.treatment.TreatmentListScreen
 import kotlinx.serialization.Serializable
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 sealed interface Route {
     @Serializable data object Today : Route
@@ -48,6 +67,12 @@ sealed interface Route {
     @Serializable data class PinLock(val mode: String, val destination: String? = null) : Route
     @Serializable data object CaregiverHub : Route
     @Serializable data object Settings : Route
+    @Serializable data class IntakeTaken(
+        val label: String,
+        val confirmedAtTime: String,
+        val nextMedicationName: String = "",
+        val nextSlotTime: String = ""
+    ) : Route
 }
 
 @Composable
@@ -61,6 +86,31 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
         it.hasRoute(Route.Calendar::class) ||
         it.hasRoute(Route.Profile::class)
     } ?: false
+
+    val appViewModel: AppViewModel = hiltViewModel()
+    val reminderEvent by appViewModel.reminder.collectAsStateWithLifecycle()
+    val takenLabel by appViewModel.takenLabel.collectAsStateWithLifecycle()
+
+    // Navigate to ConfirmationScreen when in-app dialog marks intakes as taken
+    LaunchedEffect(takenLabel) {
+        takenLabel ?: return@LaunchedEffect
+        navController.navigate(
+            Route.IntakeTaken(
+                label = takenLabel!!,
+                confirmedAtTime = LocalTime.now().format(DateTimeFormatter.ofPattern("H:mm"))
+            )
+        )
+        appViewModel.consumeTakenLabel()
+    }
+
+    reminderEvent?.let { event ->
+        InAppReminderDialog(
+            event = event,
+            onDismiss = appViewModel::dismissReminder,
+            onSnooze = { appViewModel.snooze(event.timeSlot) },
+            onMarkTaken = { appViewModel.markAllTaken(event.intakes) }
+        )
+    }
 
     Scaffold(
         bottomBar = { if (showBottomBar) AppBottomBar(navController) }
@@ -117,8 +167,73 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
             composable<Route.Settings> {
                 SettingsScreen(navController = navController)
             }
+            composable<Route.IntakeTaken> { backStackEntry ->
+                val route = backStackEntry.toRoute<Route.IntakeTaken>()
+                ConfirmationScreen(
+                    label = route.label,
+                    confirmedAtTime = route.confirmedAtTime,
+                    nextMedicationName = route.nextMedicationName,
+                    nextSlotTime = route.nextSlotTime,
+                    innerPadding = innerPadding,
+                    navController = navController
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun InAppReminderDialog(
+    event: InAppReminderEvent,
+    onDismiss: () -> Unit,
+    onSnooze: () -> Unit,
+    onMarkTaken: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Notifications,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+        },
+        title = { Text(slotAlertTitle(event.timeSlot)) },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                event.intakes.forEach { intake ->
+                    Text(
+                        text = "• ${intake.medicationName} ${intake.dose}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onMarkTaken,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text(if (event.intakes.size == 1) "Ya lo tomé" else "Ya los tomé")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onSnooze) { Text("En 10 min") }
+        }
+    )
+}
+
+private fun slotAlertTitle(slot: TimeSlot) = when (slot) {
+    TimeSlot.MORNING -> "Medicamentos de Mañana"
+    TimeSlot.NOON -> "Medicamentos de Comida"
+    TimeSlot.NIGHT -> "Medicamentos de Noche"
+    TimeSlot.AS_NEEDED -> "Medicamentos"
 }
 
 @Composable

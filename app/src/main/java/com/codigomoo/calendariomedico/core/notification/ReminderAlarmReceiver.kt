@@ -28,6 +28,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
     @Inject lateinit var notificationHelper: NotificationHelper
     @Inject lateinit var alarmScheduler: AlarmScheduler
     @Inject lateinit var preferences: ReminderPreferences
+    @Inject lateinit var reminderBus: InAppReminderBus
 
     override fun onReceive(context: Context, intent: Intent) {
         val timeSlotName = intent.getStringExtra(EXTRA_TIME_SLOT) ?: return
@@ -42,6 +43,9 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
                     .filter { it.scheduledTimeSlot == timeSlot && it.status == IntakeStatus.PENDING }
 
                 notificationHelper.showReminderNotification(timeSlot, intakes)
+                if (intakes.isNotEmpty()) {
+                    reminderBus.post(InAppReminderEvent(timeSlot = timeSlot, intakes = intakes))
+                }
 
                 val slotTime = when (timeSlot) {
                     TimeSlot.MORNING -> preferences.morningTime.first()
