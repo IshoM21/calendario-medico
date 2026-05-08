@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.codigomoo.calendariomedico.core.notification.EXTRA_MEDICATION_ID
 import com.codigomoo.calendariomedico.core.notification.EXTRA_TIME_SLOT
 import com.codigomoo.calendariomedico.core.notification.InAppReminderBus
 import com.codigomoo.calendariomedico.core.notification.InAppReminderEvent
@@ -14,7 +15,6 @@ import com.codigomoo.calendariomedico.core.notification.ReminderAlarmReceiver
 import com.codigomoo.calendariomedico.core.notification.SNOOZE_REQUEST_CODE
 import com.codigomoo.calendariomedico.data.repository.IntakeRepository
 import com.codigomoo.calendariomedico.domain.model.MedicationIntake
-import com.codigomoo.calendariomedico.domain.model.TimeSlot
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,11 +47,17 @@ class AppViewModel @Inject constructor(
 
     fun dismissReminder() { reminderBus.clear() }
 
-    fun snooze(timeSlot: TimeSlot) {
+    fun snooze(event: InAppReminderEvent) {
         reminderBus.clear()
         val alarmManager = context.getSystemService(AlarmManager::class.java)
-        val intent = Intent(context, ReminderAlarmReceiver::class.java).apply {
-            putExtra(EXTRA_TIME_SLOT, timeSlot.name)
+        val intent = if (event.medicationId != null) {
+            Intent(context, ReminderAlarmReceiver::class.java).apply {
+                putExtra(EXTRA_MEDICATION_ID, event.medicationId)
+            }
+        } else {
+            Intent(context, ReminderAlarmReceiver::class.java).apply {
+                putExtra(EXTRA_TIME_SLOT, event.timeSlot.name)
+            }
         }
         val pendingIntent = PendingIntent.getBroadcast(
             context, SNOOZE_REQUEST_CODE, intent,

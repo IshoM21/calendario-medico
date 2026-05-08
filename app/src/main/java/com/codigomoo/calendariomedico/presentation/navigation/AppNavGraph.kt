@@ -107,7 +107,7 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
         InAppReminderDialog(
             event = event,
             onDismiss = appViewModel::dismissReminder,
-            onSnooze = { appViewModel.snooze(event.timeSlot) },
+            onSnooze = { appViewModel.snooze(event) },
             onMarkTaken = { appViewModel.markAllTaken(event.intakes) }
         )
     }

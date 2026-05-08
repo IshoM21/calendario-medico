@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 import com.codigomoo.calendariomedico.domain.model.Medication
 import com.codigomoo.calendariomedico.domain.model.TimeSlot
 import java.time.LocalDateTime
+import java.time.LocalTime
 
 @Entity(
     tableName = "medications",
@@ -28,17 +29,19 @@ data class MedicationEntity(
     val isRequired: Boolean,
     val colorHex: String?,
     val minIntervalHours: Int?,
+    val specificTime: LocalTime?,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
 ) {
     fun toDomain() = Medication(
-        id, treatmentId, name, dose, instructions, timeSlot, isRequired, colorHex, minIntervalHours, createdAt, updatedAt
+        id, treatmentId, name, dose, instructions, timeSlot, isRequired, colorHex,
+        minIntervalHours, specificTime, createdAt, updatedAt
     )
 
     companion object {
         fun fromDomain(m: Medication) = MedicationEntity(
             m.id, m.treatmentId, m.name, m.dose, m.instructions, m.timeSlot,
-            m.isRequired, m.colorHex, m.minIntervalHours, m.createdAt, m.updatedAt
+            m.isRequired, m.colorHex, m.minIntervalHours, m.specificTime, m.createdAt, m.updatedAt
         )
     }
 }

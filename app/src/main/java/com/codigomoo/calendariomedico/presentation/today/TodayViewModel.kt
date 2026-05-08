@@ -261,7 +261,7 @@ class TodayViewModel @Inject constructor(
                 if (!intakes.isNullOrEmpty()) {
                     val items = intakes.map { intake ->
                         val med = allMedsById[intake.medicationId]
-                        SlotMedItem(intake, med?.colorHex, med?.instructions)
+                        SlotMedItem(intake, med?.colorHex, med?.instructions, med?.specificTime)
                     }
                     slot to items
                 } else null
@@ -274,7 +274,8 @@ class TodayViewModel @Inject constructor(
             val pending = intakesBySlot[slot]?.filter { it.status == IntakeStatus.PENDING } ?: continue
             if (pending.isNotEmpty()) {
                 val first = pending.first()
-                nextIntakeInfo = NextIntakeInfo(first, allMedsById[first.medicationId]?.instructions)
+                val firstMed = allMedsById[first.medicationId]
+                nextIntakeInfo = NextIntakeInfo(first, firstMed?.instructions, firstMed?.specificTime)
                 nextSlotPendingIntakes = pending
                 break
             }

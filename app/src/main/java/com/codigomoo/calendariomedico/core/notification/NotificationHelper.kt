@@ -26,6 +26,8 @@ const val ACTION_SNOOZE = "com.codigomoo.calendariomedico.ACTION_SNOOZE"
 const val SNOOZE_REQUEST_CODE = 9001
 const val PENDING_NOTIFICATION_ID = 2001
 
+fun medicationNotificationId(medicationId: Long) = (20000 + medicationId).toInt()
+
 fun timeSlotNotificationId(slot: TimeSlot) = when (slot) {
     TimeSlot.MORNING -> 1001
     TimeSlot.NOON -> 1002
@@ -145,6 +147,42 @@ class NotificationHelper @Inject constructor(
         val intent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = ACTION_SNOOZE
             putExtra(EXTRA_TIME_SLOT, timeSlot.name)
+            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context, notificationId * 10 + 1,
+            intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Action(0, "En 10 min ⏰", pendingIntent)
+    }
+
+    fun showMedicationNotification(intake: MedicationIntake) {
+        val notificationId = medicationNotificationId(intake.medicationId)
+        val body = "${intake.medicationName} ${intake.dose}"
+        val tapPendingIntent = buildTapPendingIntent()
+        val markTakenAction = buildMarkTakenAction(notificationId, longArrayOf(intake.id))
+        val snoozeAction = buildMedicationSnoozeAction(notificationId, intake.medicationId)
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle("Recordatorio de medicamento")
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(tapPendingIntent)
+            .addAction(markTakenAction)
+            .addAction(snoozeAction)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        manager.notify(notificationId, notification)
+    }
+
+    private fun buildMedicationSnoozeAction(
+        notificationId: Int,
+        medicationId: Long
+    ): NotificationCompat.Action {
+        val intent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = ACTION_SNOOZE
+            putExtra(EXTRA_MEDICATION_ID, medicationId)
             putExtra(EXTRA_NOTIFICATION_ID, notificationId)
         }
         val pendingIntent = PendingIntent.getBroadcast(

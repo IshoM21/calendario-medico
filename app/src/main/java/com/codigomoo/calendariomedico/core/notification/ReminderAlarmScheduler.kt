@@ -14,6 +14,8 @@ import java.time.ZonedDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
+const val EXTRA_MEDICATION_ID = "extra_medication_id"
+
 @Singleton
 class ReminderAlarmScheduler @Inject constructor(
     @ApplicationContext private val context: Context
@@ -23,8 +25,34 @@ class ReminderAlarmScheduler @Inject constructor(
 
     override fun scheduleTimeSlot(timeSlot: TimeSlot, time: LocalTime) {
         if (timeSlot == TimeSlot.AS_NEEDED) return
+        schedule(timeSlotAlarmRequestCode(timeSlot), time) { intent ->
+            intent.putExtra(EXTRA_TIME_SLOT, timeSlot.name)
+        }
+    }
+
+    override fun scheduleMedication(medicationId: Long, time: LocalTime) {
+        schedule(medicationAlarmRequestCode(medicationId), time) { intent ->
+            intent.putExtra(EXTRA_MEDICATION_ID, medicationId)
+        }
+    }
+
+    override fun cancelMedication(medicationId: Long) {
+        cancel(medicationAlarmRequestCode(medicationId))
+    }
+
+    override fun cancelAll() {
+        listOf(TimeSlot.MORNING, TimeSlot.NOON, TimeSlot.NIGHT).forEach { slot ->
+            cancel(timeSlotAlarmRequestCode(slot))
+        }
+    }
+
+    private fun schedule(requestCode: Int, time: LocalTime, intentConfig: (Intent) -> Unit) {
+        val intent = Intent(context, ReminderAlarmReceiver::class.java).also(intentConfig)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context, requestCode, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         val triggerMillis = nextTriggerMillis(time)
-        val pendingIntent = buildSchedulePendingIntent(timeSlot)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
             alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
         } else {
@@ -32,25 +60,13 @@ class ReminderAlarmScheduler @Inject constructor(
         }
     }
 
-    override fun cancelAll() {
-        listOf(TimeSlot.MORNING, TimeSlot.NOON, TimeSlot.NIGHT).forEach { slot ->
-            val intent = Intent(context, ReminderAlarmReceiver::class.java)
-            val pendingIntent = PendingIntent.getBroadcast(
-                context, timeSlotAlarmRequestCode(slot), intent,
-                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-            )
-            pendingIntent?.let { alarmManager.cancel(it) }
-        }
-    }
-
-    private fun buildSchedulePendingIntent(timeSlot: TimeSlot): PendingIntent {
-        val intent = Intent(context, ReminderAlarmReceiver::class.java).apply {
-            putExtra(EXTRA_TIME_SLOT, timeSlot.name)
-        }
-        return PendingIntent.getBroadcast(
-            context, timeSlotAlarmRequestCode(timeSlot), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    private fun cancel(requestCode: Int) {
+        val intent = Intent(context, ReminderAlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context, requestCode, intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
         )
+        pendingIntent?.let { alarmManager.cancel(it) }
     }
 
     private fun nextTriggerMillis(time: LocalTime): Long {
@@ -60,3 +76,5 @@ class ReminderAlarmScheduler @Inject constructor(
         return trigger.toInstant().toEpochMilli()
     }
 }
+
+fun medicationAlarmRequestCode(medicationId: Long) = (10000 + medicationId).toInt()

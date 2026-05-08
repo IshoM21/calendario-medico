@@ -27,12 +27,14 @@ data class AsNeededDialogState(
 data class SlotMedItem(
     val intake: MedicationIntake,
     val colorHex: String? = null,
-    val instructions: String? = null
+    val instructions: String? = null,
+    val specificTime: java.time.LocalTime? = null
 )
 
 data class NextIntakeInfo(
     val intake: MedicationIntake,
-    val instructions: String? = null
+    val instructions: String? = null,
+    val specificTime: java.time.LocalTime? = null
 )
 
 data class SlotTimes(

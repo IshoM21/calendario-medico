@@ -12,7 +12,8 @@ import javax.inject.Singleton
 data class InAppReminderEvent(
     val timeSlot: TimeSlot,
     val intakes: List<MedicationIntake>,
-    val firedAt: LocalDateTime = LocalDateTime.now()
+    val firedAt: LocalDateTime = LocalDateTime.now(),
+    val medicationId: Long? = null
 )
 
 @Singleton

@@ -32,13 +32,21 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -49,6 +57,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.codigomoo.calendariomedico.domain.model.TimeSlot
 import java.time.DayOfWeek
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
+private val TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")
 
 private val DAYS_ORDERED = listOf(
     DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
@@ -151,6 +163,13 @@ fun MedicationFormScreen(
                         )
                     }
                 }
+            }
+
+            if (form.timeSlot != TimeSlot.AS_NEEDED) {
+                SpecificTimeRow(
+                    specificTime = form.specificTime,
+                    onTimeSelected = viewModel::onSpecificTimeChange
+                )
             }
 
             if (form.timeSlot != TimeSlot.AS_NEEDED) {
@@ -264,6 +283,77 @@ fun MedicationFormScreen(
             }
 
             Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SpecificTimeRow(
+    specificTime: LocalTime?,
+    onTimeSelected: (LocalTime?) -> Unit
+) {
+    var showPicker by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text("Hora específica", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                if (specificTime != null) specificTime.format(TIME_FMT)
+                else "Usa el horario del slot (Mañana / Comida / Noche)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            )
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (specificTime != null) {
+                TextButton(onClick = { onTimeSelected(null) }) { Text("Quitar") }
+            }
+            TextButton(onClick = { showPicker = true }) {
+                Text(if (specificTime != null) "Cambiar" else "Asignar")
+            }
+        }
+    }
+
+    if (showPicker) {
+        val initial = specificTime ?: LocalTime.of(8, 0)
+        val state = rememberTimePickerState(
+            initialHour = initial.hour,
+            initialMinute = initial.minute,
+            is24Hour = true
+        )
+        Dialog(onDismissRequest = { showPicker = false }) {
+            androidx.compose.material3.Surface(
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+                tonalElevation = 6.dp
+            ) {
+                Column(
+                    modifier = androidx.compose.ui.Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    Text("Selecciona la hora", style = MaterialTheme.typography.labelLarge)
+                    TimePicker(state = state)
+                    Row(
+                        modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { showPicker = false }) { Text("Cancelar") }
+                        TextButton(onClick = {
+                            onTimeSelected(LocalTime.of(state.hour, state.minute))
+                            showPicker = false
+                        }) { Text("Aceptar") }
+                    }
+                }
+            }
         }
     }
 }

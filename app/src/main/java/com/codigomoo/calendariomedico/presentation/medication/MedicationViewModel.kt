@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import javax.inject.Inject
 
 data class MedicationFormState(
@@ -31,6 +32,7 @@ data class MedicationFormState(
     val isRequired: Boolean = true,
     val colorHex: String? = null,
     val minIntervalHours: Int? = null,
+    val specificTime: LocalTime? = null,
     val nameError: String? = null,
     val doseError: String? = null,
     val isSaving: Boolean = false,
@@ -86,6 +88,7 @@ class MedicationViewModel @Inject constructor(
                     isRequired = med.isRequired,
                     colorHex = med.colorHex,
                     minIntervalHours = med.minIntervalHours,
+                    specificTime = med.specificTime,
                     isSaved = false
                 )
             }
@@ -95,9 +98,10 @@ class MedicationViewModel @Inject constructor(
     fun onNameChange(v: String) = _form.update { it.copy(name = v, nameError = null) }
     fun onDoseChange(v: String) = _form.update { it.copy(dose = v, doseError = null) }
     fun onInstructionsChange(v: String) = _form.update { it.copy(instructions = v) }
-    fun onTimeSlotChange(v: TimeSlot) = _form.update { it.copy(timeSlot = v) }
+    fun onTimeSlotChange(v: TimeSlot) = _form.update { it.copy(timeSlot = v, specificTime = null) }
     fun onIsRequiredChange(v: Boolean) = _form.update { it.copy(isRequired = v) }
     fun onColorChange(v: String?) = _form.update { it.copy(colorHex = v) }
+    fun onSpecificTimeChange(v: LocalTime?) = _form.update { it.copy(specificTime = v) }
 
     fun onDayToggle(day: DayOfWeek) {
         _form.update { s ->
@@ -133,6 +137,7 @@ class MedicationViewModel @Inject constructor(
                 isRequired = s.isRequired,
                 colorHex = s.colorHex,
                 minIntervalHours = s.minIntervalHours,
+                specificTime = if (s.timeSlot == TimeSlot.AS_NEEDED) null else s.specificTime,
                 createdAt = now,
                 updatedAt = now
             )

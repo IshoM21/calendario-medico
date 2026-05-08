@@ -5,5 +5,7 @@ import java.time.LocalTime
 
 interface AlarmScheduler {
     fun scheduleTimeSlot(timeSlot: TimeSlot, time: LocalTime)
+    fun scheduleMedication(medicationId: Long, time: LocalTime)
+    fun cancelMedication(medicationId: Long)
     fun cancelAll()
 }

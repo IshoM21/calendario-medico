@@ -399,8 +399,8 @@ private fun ProximaTomadCard(
     currentTime: LocalTime,
     onMark: () -> Unit
 ) {
-    val slotTime = slotTimes.timeOf(info.intake.scheduledTimeSlot)
-    val minutesUntil = java.time.Duration.between(currentTime, slotTime).toMinutes()
+    val displayTime = info.specificTime ?: slotTimes.timeOf(info.intake.scheduledTimeSlot)
+    val minutesUntil = java.time.Duration.between(currentTime, displayTime).toMinutes()
     val timeFmt = DateTimeFormatter.ofPattern("H:mm")
     val subtitle = buildString {
         if (minutesUntil > 0) {
@@ -411,7 +411,7 @@ private fun ProximaTomadCard(
             if (m > 0 || h == 0L) append("${m} min")
             append(" · ")
         }
-        append(slotTime.format(timeFmt))
+        append(displayTime.format(timeFmt))
         if (info.instructions != null) append(" · ${info.instructions}")
     }
 
@@ -581,6 +581,7 @@ private fun SlotMedCard(
     }
     val dotColor = medColor ?: Color(0xFF1F8A8A)
     val timeFmt = DateTimeFormatter.ofPattern("H:mm")
+    val displayTime = item.specificTime ?: slotTime
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -619,7 +620,7 @@ private fun SlotMedCard(
                     textDecoration = if (isTaken) TextDecoration.LineThrough else TextDecoration.None
                 )
                 Text(
-                    text = "${intake.dose} · ${slotTime.format(timeFmt)}",
+                    text = "${intake.dose} · ${displayTime.format(timeFmt)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )

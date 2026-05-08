@@ -38,16 +38,23 @@ class NotificationActionReceiver : BroadcastReceiver() {
             }
             ACTION_SNOOZE -> {
                 notificationManager.cancel(notificationId)
-                val timeSlotName = intent.getStringExtra(EXTRA_TIME_SLOT) ?: return
                 val alarmManager = context.getSystemService(AlarmManager::class.java)
-                val snoozeIntent = Intent(context, ReminderAlarmReceiver::class.java).apply {
-                    putExtra(EXTRA_TIME_SLOT, timeSlotName)
+                val triggerTime = System.currentTimeMillis() + 10 * 60 * 1000L
+                val medicationId = intent.getLongExtra(EXTRA_MEDICATION_ID, -1L)
+                val snoozeIntent = if (medicationId != -1L) {
+                    Intent(context, ReminderAlarmReceiver::class.java).apply {
+                        putExtra(EXTRA_MEDICATION_ID, medicationId)
+                    }
+                } else {
+                    val timeSlotName = intent.getStringExtra(EXTRA_TIME_SLOT) ?: return
+                    Intent(context, ReminderAlarmReceiver::class.java).apply {
+                        putExtra(EXTRA_TIME_SLOT, timeSlotName)
+                    }
                 }
                 val pendingIntent = PendingIntent.getBroadcast(
                     context, SNOOZE_REQUEST_CODE, snoozeIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
-                val triggerTime = System.currentTimeMillis() + 10 * 60 * 1000L
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
                     alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
                 } else {

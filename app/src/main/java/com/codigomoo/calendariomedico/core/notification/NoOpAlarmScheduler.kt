@@ -6,5 +6,7 @@ import javax.inject.Inject
 
 class NoOpAlarmScheduler @Inject constructor() : AlarmScheduler {
     override fun scheduleTimeSlot(timeSlot: TimeSlot, time: LocalTime) = Unit
+    override fun scheduleMedication(medicationId: Long, time: LocalTime) = Unit
+    override fun cancelMedication(medicationId: Long) = Unit
     override fun cancelAll() = Unit
 }
