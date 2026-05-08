@@ -403,7 +403,14 @@ private fun ProximaTomadCard(
     val minutesUntil = java.time.Duration.between(currentTime, slotTime).toMinutes()
     val timeFmt = DateTimeFormatter.ofPattern("H:mm")
     val subtitle = buildString {
-        if (minutesUntil > 0) append("En ${minutesUntil} min · ")
+        if (minutesUntil > 0) {
+            val h = minutesUntil / 60
+            val m = minutesUntil % 60
+            append("En ")
+            if (h > 0) append("${h} h ")
+            if (m > 0 || h == 0L) append("${m} min")
+            append(" · ")
+        }
         append(slotTime.format(timeFmt))
         if (info.instructions != null) append(" · ${info.instructions}")
     }
