@@ -5,6 +5,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import com.codigomoo.calendariomedico.MainActivity
@@ -15,7 +17,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-const val CHANNEL_ID = "medication_reminders"
+const val CHANNEL_ID = "medication_reminders_v2"
 const val EXTRA_TIME_SLOT = "extra_time_slot"
 const val EXTRA_INTAKE_IDS = "extra_intake_ids"
 const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
@@ -45,12 +47,17 @@ class NotificationHelper @Inject constructor(
     private val manager = context.getSystemService(NotificationManager::class.java)
 
     fun createChannel() {
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
         val channel = NotificationChannel(
             CHANNEL_ID,
             "Recordatorios de medicamentos",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "Alertas para tomar medicamentos a tiempo"
+            setSound(Settings.System.DEFAULT_ALARM_ALERT_URI, audioAttributes)
         }
         manager.createNotificationChannel(channel)
     }

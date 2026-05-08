@@ -1,6 +1,8 @@
 # Pendientes y ajustes por implementar
 
-## 1. Modal de recordatorio activo (in-app)
+> **Sin pendientes activos.** Todo implementado. Ver sección "Implementado" al final.
+
+## ~~1. Modal de recordatorio activo (in-app)~~
 
 Cuando la alarma dispara y la app está en foreground, mostrar un modal/dialog sobre la pantalla actual en lugar de solo la notificación del sistema.
 
@@ -18,7 +20,7 @@ Cuando la alarma dispara y la app está en foreground, mostrar un modal/dialog s
 
 ---
 
-## 2. Pantalla de confirmación de toma
+## ~~2. Pantalla de confirmación de toma~~
 
 Después de marcar una toma como tomada (desde el modal o desde TodayScreen), mostrar una pantalla de confirmación antes de regresar.
 
@@ -37,6 +39,8 @@ Después de marcar una toma como tomada (desde el modal o desde TodayScreen), mo
 ---
 
 ## Implementado
+- ✅ **Modal de recordatorio activo** — `InAppReminderBus` + `AppViewModel` + `InAppReminderDialog`; snooze 10 min; expira eventos >15 min
+- ✅ **Pantalla de confirmación de toma** — check verde + medicamento + próxima toma opcional; navega desde TodayScreen y desde el modal
 
 - ✅ **Notificaciones con sonido en silencio** — canal `medication_reminders_v2` con `USAGE_ALARM`
 - ✅ **Rediseño TodayScreen** — header, progreso, próxima toma, slots colapsables, reordenamiento en tiempo real
