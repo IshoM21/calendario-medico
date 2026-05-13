@@ -50,6 +50,6 @@ class GenerateDailyIntakesUseCase @Inject constructor(
             )
         }
 
-        if (toInsert.isNotEmpty()) intakeRepository.insertAll(toInsert)
+        if (toInsert.isNotEmpty()) intakeRepository.insertAllIfAbsent(toInsert)
     }
 }

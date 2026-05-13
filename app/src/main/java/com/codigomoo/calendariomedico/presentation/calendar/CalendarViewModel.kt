@@ -129,7 +129,7 @@ class CalendarViewModel @Inject constructor(
                         var d = monthStart; while (!d.isAfter(monthEnd)) { add(d); d = d.plusDays(1) }
                         for (i in 0..6) add(weekStart.plusDays(i.toLong()))
                     }
-                    dates.forEach { date -> launch { generateDailyIntakesUseCase(date) } }
+                    dates.forEach { date -> generateDailyIntakesUseCase(date) }
                 }
         }
     }

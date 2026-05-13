@@ -37,6 +37,9 @@ class IntakeRepository @Inject constructor(
     suspend fun insertAll(intakes: List<MedicationIntake>) =
         dao.insertAll(intakes.map { MedicationIntakeEntity.fromDomain(it) })
 
+    suspend fun insertAllIfAbsent(intakes: List<MedicationIntake>) =
+        dao.insertAllIfAbsent(intakes.map { MedicationIntakeEntity.fromDomain(it) })
+
     suspend fun markTaken(id: Long, notes: String? = null) =
         dao.updateStatus(id, IntakeStatus.TAKEN, LocalDateTime.now(), notes)
 
